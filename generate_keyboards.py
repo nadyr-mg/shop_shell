@@ -18,7 +18,7 @@ options_variants = [
     ]
 
 
-def get_keyboard(name, is_eng):
+def get_keyboard(name, is_eng=None):
     keyboard_num = keyboard_names[name]
     if keyboard_num < 2:
         call_method = reply_keyboard
@@ -34,7 +34,7 @@ def reply_keyboard(options, is_eng):
         option_variant = options[0]
     else:
         option_variant = options[1]
-    length = len(options)
+    length = len(option_variant)
     for cur_measure in range(0, length, 2):
         row = [option_variant[cur_measure]]
         if cur_measure + 1 < length:
