@@ -178,7 +178,36 @@ def handle_change_inviter(call):
 
     users_db.close()
 
-    # TODO make force reply for setting inviter
+    if is_eng:
+        text = "👤 Select your inviter. Type in his id:"
+    else:
+        text = "👤 Выберете пригласителя. Введите его id:"
+    force_reply = telebot.types.ForceReply(selective=False)
+    bot.send_message(chat.id, text, reply_markup=force_reply)
+
+
+@bot.message_handler(func=
+                     lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "👤")
+def handle_reply_inviter(message):
+    chat = message.chat
+    users_db = Users_db(DB_NAME)
+    is_eng = users_db.select_is_eng(chat.id)
+    if len(message.text) < 20 and message.text.isnumeric():
+        inviter_id = int(message.text)
+        users_db.update_ref_inviter(chat.id, inviter_id)
+
+        if is_eng:
+            text = "Inviter is set up!"
+        else:
+            text = "Пригласитель установлен!"
+    else:
+        if is_eng:
+            text = "You provided wrong id"
+        else:
+            text = "Введен неправильный id"
+    users_db.close()
+
+    bot.send_message(chat.id, text)
 
 
 if __name__ == '__main__':

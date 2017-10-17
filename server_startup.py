@@ -10,6 +10,8 @@ def start_server(bot):
         return '', 200
 
     bot.remove_webhook()
+    from time import sleep
+    sleep(1)
     bot.set_webhook(url="https://{}:{}/{}".format(config.WEBHOOK_HOST, config.WEBHOOK_PORT, config.TOKEN),
                     certificate=open(config.WEBHOOK_SSL_CERT, 'rb'))
     server.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT,
