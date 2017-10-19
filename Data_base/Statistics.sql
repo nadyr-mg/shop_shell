@@ -1,9 +1,0 @@
-BEGIN TRANSACTION;
-CREATE TABLE IF NOT EXISTS `Statistics` (
-	`user_id`	INTEGER NOT NULL UNIQUE,
-	`balance`	REAL NOT NULL,
-	`invested`	REAL NOT NULL,
-	`profit`	REAL NOT NULL,
-	PRIMARY KEY(`user_id`)
-);
-COMMIT;

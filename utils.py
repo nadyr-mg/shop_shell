@@ -10,9 +10,9 @@ keyboard_names = {
 }
 options_variants = [
     [("🇷🇺 Русский", "🇺🇸 English")],
-    [("📈 Statistics", "👥 Referral program", "📲 About the service", "⚙️ Settings"),
-     ("📈 Статистика", "👥 Реферальная программа", "📲 О сервисе", "⚙️ Настройки")],
-    [("💵 Refill", "💸Withdraw"), ("💵 Пополнить", "💸 Вывести")],
+    [("📈 Statistics", "👥 Referral program", "📲 About the service", "⚙ Settings"),
+     ("📈 Статистика", "👥 Реферальная программа", "📲 О сервисе", "⚙ Настройки")],
+    [("💵 Refill", "💸 Withdraw", "🔄 Reinvest"), ("💵 Пополнить", "💸 Вывести", "🔄 Реинвест")],
     [("🔗 Invitation link",), ("🔗 Пригласительная ссылка",)],
     [("💬 Language", "💳 Payment requisites", "👤 Set an inviter"),
      ("💬 Язык", "💳 Платежные реквизиты", "👤 Установить приглашающего")],
@@ -69,3 +69,61 @@ def requisites_keyboard(name, requisites):
         keyboard.add(InlineKeyboardButton(text=options[cur_measure] + ": {}".format(requisites[cur_measure]),
                                           callback_data=options[cur_measure]))
     return keyboard
+
+
+def check_requisite(pay_method, requisite):
+    flag = True
+    if pay_method == "AdvCash" and (len(requisite) != 13 or not (requisite[0].isalpha() and requisite[1:].isnumeric())):
+        flag = False
+    elif pay_method == "Payeer" and (len(requisite) != 9 or not (requisite[0].isalpha() and requisite[1:].isnumeric())):
+        flag = False
+    elif pay_method == "Bitcoin" and len(requisite) < 20:
+        flag = False
+    elif pay_method == "Qiwi" and (len(requisite) < 6 or not (requisite[2:].isnumeric())):
+        flag = False
+    elif pay_method == "Perfect Money" and (len(requisite) != 9 or not (requisite[1:].isnumeric())):
+        flag = False
+    return flag
+
+
+def lift_on_lines(users_db,  user_id, func, **kwargs):
+    cur_id = user_id
+    remember_ids = [cur_id]
+    for cur_line in range(1, 4):
+        inviter = users_db.select_ref_inviter(cur_id)
+        if inviter is None or inviter in remember_ids:
+            break
+
+        func(users_db, cur_line, inviter, kwargs)
+
+        cur_id = inviter
+        remember_ids.append(cur_id)
+
+
+def update_people_on_line(users_db, user_id, cur_line, **kwargs):
+    operation = kwargs.get('operation')
+    users_db.update_ref_people_count(user_id, cur_line, operation)
+
+
+def update_earn_on_line(users_db, user_id, cur_line, **kwargs):
+    line_value = kwargs.get('line_value') * (0.08 / (2 ** (cur_line - 1)))
+    users_db.update_ref_line(user_id, cur_line, line_value)
+
+
+def calc_percentage(value):
+    percentage = 0
+    if 1 <= value <= 50:
+        percentage = 0.0111
+    elif 51 <= value <= 100:
+        percentage = 0.0222
+    elif 101 <= value <= 500:
+        percentage = 0.0333
+    elif 501 <= value <= 1000:
+        percentage = 0.0444
+    elif value > 1000:
+        percentage = 0.0555
+    return percentage
+
+
+if __name__ == '__main__':
+    print(calc_percentage(1.0))

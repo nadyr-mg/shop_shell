@@ -10,8 +10,8 @@ class Users_db:
     def select_stats(self, user_id):
         return self.cursor.execute('SELECT * FROM Statistics WHERE user_id = ?', (user_id,)).fetchone()
 
-    def select_is_eng(self, user_id):
-        return self.cursor.execute('SELECT is_eng FROM Statistics WHERE user_id = ?', (user_id,)).fetchone()[0]
+    def select_stats_field(self, user_id, field):
+        return self.cursor.execute('SELECT {} FROM Statistics WHERE user_id = ?'.format(field), (user_id,)).fetchone()[0]
 
     def is_exist_stats(self, user_id):
         return self.cursor.\
@@ -19,6 +19,11 @@ class Users_db:
 
     def insert_stats(self, data):
         self.cursor.execute('INSERT INTO Statistics VALUES(?, ?, ?, ?, ?)', data)
+
+    def update_stats_field(self, user_id, field, value):
+        self.cursor.execute("""UPDATE Statistics SET 
+                                  {} = ?
+                                WHERE user_id = ?""".format(field), (value, user_id))
 
     def update_stats_profit(self, user_id, balance, profit):
         self.cursor.execute("""UPDATE Statistics SET 
@@ -31,10 +36,11 @@ class Users_db:
                                   invested = invested + ?
                                 WHERE user_id = ?""", (invested, user_id))
 
-    def update_stats_lang(self, user_id, is_eng):
+    def update_stats_reinvest(self, user_id, value):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  is_eng = ?
-                                WHERE user_id = ?""", (is_eng, user_id))
+                                  balance = 0,
+                                  invested = invested + ?
+                                WHERE user_id = ?""", (value, user_id))
 
     # Ref_program table
     def select_ref_all(self, user_id):
@@ -44,7 +50,13 @@ class Users_db:
         return self.cursor.execute('SELECT inviter FROM Ref_program WHERE user_id = ?', (user_id,)).fetchone()[0]
 
     def insert_ref(self, user_id):
-        self.cursor.execute('INSERT INTO Ref_program VALUES(?, NULL, NULL, NULL, NULL)', (user_id,))
+        self.cursor.execute('INSERT INTO Ref_program VALUES(?, NULL, NULL, NULL, NULL, 0, 0, 0)', (user_id,))
+
+    def update_ref_people_count(self, user_id, line_number, operation):
+        people_name = str(line_number) + "_people"
+        self.cursor.execute("""UPDATE Ref_program SET 
+                                  {} = {} {} 1
+                                WHERE user_id = ?""".format(people_name, people_name, operation), (user_id,))
 
     def update_ref_inviter(self, user_id, inviter):
         self.cursor.execute("""UPDATE Ref_program SET 
