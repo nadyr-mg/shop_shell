@@ -1,0 +1,4 @@
+When were working with AdvCash:
+  to install pysimplesoap: pip3 install -e git+https://github.com/pysimplesoap/pysimplesoap.git@0001fcee5bfda782504843bf68f3ca7175cc9118#egg=PySimpleSOAP-master
+  to install advcashwsm: setup.py build
+                         setup.py install
