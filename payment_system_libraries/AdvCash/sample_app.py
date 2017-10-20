@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import absolute_import
 from decimal import *
 import warnings
 warnings.filterwarnings('ignore')
@@ -8,12 +10,12 @@ warnings.filterwarnings('ignore')
 #import logging
 #logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
-from advcashwsm.soap_agent import SoapAgent
-from advcashwsm.soap_agent import CURRENCY_USD, CURRENCY_EUR, CURRENCY_RUR
-from advcashwsm.soap_agent import CURRENCY_EXCHANGE_ACTION_SELL
-from advcashwsm.soap_agent import SUPPORTED_LANGUAGE_EN
-from advcashwsm.soap_agent import YANDEX_MONEY
-from advcashwsm.soap_agent import CARD_TYPE_VIRTUAL
+from .advcashwsm.soap_agent import SoapAgent
+from .advcashwsm.soap_agent import CURRENCY_USD, CURRENCY_EUR, CURRENCY_RUR
+from .advcashwsm.soap_agent import CURRENCY_EXCHANGE_ACTION_SELL
+from .advcashwsm.soap_agent import SUPPORTED_LANGUAGE_EN
+from .advcashwsm.soap_agent import YANDEX_MONEY
+from .advcashwsm.soap_agent import CARD_TYPE_VIRTUAL
 
 api_name = "api_name"
 account_email = "bolkimen@insart.com"
@@ -23,10 +25,10 @@ api_password = "password"
 sa = SoapAgent(api_name, account_email, api_password)
 
 ## getBalances
-print "getBalances"
+print("getBalances")
 for balance in sa.getBalances():
-    print "\t%s\t->\t%s" % ( balance['return']['id'], balance['return']['amount'] )
-print
+    print("\t%s\t->\t%s" % ( balance['return']['id'], balance['return']['amount'] ))
+print()
 
 ## emailTransfer
 #print sa.emailTransfer({"amount": Decimal('5.00'),
@@ -39,10 +41,10 @@ print
 #print sa.findTransaction("fd6e2b9d-5f3e-4f5c-9127-3ea215225df7")
 
 ## history
-print "history"
+print("history")
 for history in sa.history({}):
-    print history
-print
+    print(history)
+print()
 
 ## register
 #print sa.register({"email": "some@mail.com",
@@ -72,10 +74,10 @@ print
 #                          "lastName": "Pupkin"})
 
 ## validateAccounts
-print "validateAccounts"
+print("validateAccounts")
 for account in sa.validateAccounts(["pupkin", "petya", "bob"]):
-    print "\t%s\t->\t%s" % ( account["return"]["systemAccountName"], account["return"]["present"] )
-print
+    print("\t%s\t->\t%s" % ( account["return"]["systemAccountName"], account["return"]["present"] ))
+print()
 
 ## validationSendMoney
 #sa.validationSendMoney({"amount": Decimal("5.00"),
