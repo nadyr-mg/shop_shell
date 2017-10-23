@@ -1,6 +1,6 @@
 branch-defaults:
   master:
-    environment: flask-env
+    environment: flask-trade-bot-env
     group_suffix: null
 global:
   application_name: flask_trade_bot

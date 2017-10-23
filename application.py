@@ -300,4 +300,7 @@ def handle_reply_requisite(message):
 
 if __name__ == '__main__':
     from site_directory.server_startup import start_server
-    start_server(bot)
+    from flask import Flask
+
+    application = Flask(__name__)
+    start_server(application, bot)

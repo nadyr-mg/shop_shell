@@ -1,8 +1,7 @@
-def start_server(bot):
+def start_server(application, bot):
     import config
     from telebot import types
-    from flask import Flask, request, render_template
-    application = Flask(__name__)
+    from flask import request, render_template
 
     @application.route('/{}'.format(config.TOKEN), methods=['POST'])
     def parse_request():
@@ -26,5 +25,5 @@ def start_server(bot):
     sleep(1)
     bot.set_webhook(url="https://{}:{}/{}".format(config.WEBHOOK_HOST, config.WEBHOOK_PORT, config.TOKEN),
                     certificate=open(config.WEBHOOK_SSL_CERT, 'rb'))
-    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT,
-               ssl_context=(config.WEBHOOK_SSL_CERT, config.WEBHOOK_SSL_PKEY))
+    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
+
