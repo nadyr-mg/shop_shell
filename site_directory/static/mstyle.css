@@ -1,0 +1,54 @@
+#bg-w .row .ast {
+	margin-left: 85px;
+	}
+	
+#bg-w .row .mst {
+    font-size: 13px;
+    line-height: 24px;
+    background: rgba(10, 48, 82, 0.76);
+    position: relative;
+    overflow: hidden;
+    min-height: 360px;
+    padding-top: 40px;
+    padding-bottom: 60px;
+    width: 100%;
+    margin-left: 32.5px;
+    box-shadow: 0 0 30px 0px rgb(0, 0, 0);
+    margin-top: 142px;
+    border-radius: 11px;
+    text-align: center;
+ }	
+ 
+ #bg-w .row .rst {
+    font-size: 13px;
+    line-height: 24px;
+    background: rgba(10, 48, 82, 0.76);
+    position: relative;
+    overflow: hidden;
+    min-height: 360px;
+    padding-top: 40px;
+    padding-bottom: 60px;
+    width: 100%;
+    margin-left: 32.5px;
+    box-shadow: 0 0 30px 0px rgb(0, 0, 0);
+    border-radius: 11px;
+    text-align: center;
+    margin-top: 20px;
+ }	
+ 
+  #bg-w .row .cst {
+    font-size: 13px;
+    line-height: 24px;
+    background: rgba(10, 48, 82, 0.76);
+    position: relative;
+    overflow: hidden;
+    min-height: 360px;
+    padding-top: 40px;
+    padding-bottom: 60px;
+    width: 50%;
+    margin-left: 350px;
+    box-shadow: 0 0 30px 0px rgb(0, 0, 0);
+    border-radius: 11px;
+    text-align: center;
+    margin-top: 20px;
+ }

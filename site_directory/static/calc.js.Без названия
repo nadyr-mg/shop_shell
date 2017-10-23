@@ -1,0 +1,83 @@
+function round(value, decimals) {
+    return Number(Math.round(value+"e"+decimals)+"e-"+decimals);
+}
+
+var selectPlan = 1;
+
+var plans = ['1', '2', '3'];
+
+function _unlink(plan){
+    $('#planz' + plan).css('outline', '2px solid #2eccb0');
+    $('#planz' + plan).css('z-index', '99');
+    
+    if ( plan == 1 ){
+        $('#planz2').css('outline', 'none');
+        $('#planz2').css('z-index', '0');
+        $('#planz3').css('outline', 'none');
+        $('#planz3').css('z-index', '0');
+        $('#selected_plan').val(plans[0]);
+    } else if ( plan == 2 ){
+        $('#planz1').css('outline', 'none');
+        $('#planz1').css('z-index', '0');
+        $('#planz3').css('outline', 'none');
+        $('#planz3').css('z-index', '0');
+        $('#selected_plan').val(plans[1]);
+    } else if ( plan == 3 ){
+        $('#planz2').css('outline', 'none');
+        $('#planz2').css('z-index', '0');   
+        $('#planz1').css('outline', 'none');
+        $('#planz1').css('z-index', '0');
+        $('#selected_plan').val(plans[2]);
+    }
+    
+    if ( selectPlan == 1 ){
+            $('#amount').val(10.00);
+            $("#charges").html(0.8);
+            $("#returned").html(10.00);
+            $('#all').html(10.8);
+        }else if ( selectPlan == 2 ){
+            $('#amount').val(50.00);
+            $("#charges").html(6.00);
+            $("#returned").html(50.00);
+            $('#all').html(56.00);
+        }else if ( selectPlan == 3){
+            $('#amount').val(200.00);
+            $("#charges").html(36.00);
+            $("#returned").html(200.00);
+            $('#all').html(236.00);
+        }
+}
+
+$('#planz1').click(function(){
+    selectPlan = 1;
+    _unlink(selectPlan);
+});
+
+$('#planz2').click(function(){
+    selectPlan = 2;
+    _unlink(selectPlan);
+});
+
+$('#planz3').click(function(){
+    selectPlan = 3;
+    _unlink(selectPlan);
+});
+
+$('#amount').keyup(function(event){
+        var inz = $(this).val();
+        var out = inz.replace(',', '.');
+        $(this).val(out);
+        if ( selectPlan == 1 ){
+            $("#charges").html( $(this).val() * 8 / 100 );
+            $("#returned").html( $(this).val() );
+            $("#all").html( round(parseFloat($("#charges").html()) + parseFloat($("#returned").html()), 2) );
+        }else if ( selectPlan == 2 ){
+            $("#charges").html( $(this).val() * 12 / 100 );
+            $("#returned").html( $(this).val() );
+            $("#all").html( round(parseFloat($("#charges").html()) + parseFloat($("#returned").html()), 2) );
+        }else if ( selectPlan == 3){
+            $("#charges").html( $(this).val() * 18 / 100 );
+            $("#returned").html( $(this).val() );
+            $("#all").html( round(parseFloat($("#charges").html()) + parseFloat($("#returned").html()), 2) );
+        }
+});

@@ -1,0 +1,33 @@
+/*-----------------------------------------------------------------------------------
+/*
+/* Main JS
+/*
+-----------------------------------------------------------------------------------*/  
+
+(function($) {
+	/*---------------- Scrolldown -----------------*/
+	$(window).scroll(function() {    
+    var scroll = $(window).scrollTop();
+
+    if (scroll >= 140) {
+        $("header").addClass("darkHeader");
+    } else {
+        $("header").removeClass("darkHeader");
+    }
+	});
+	/*---------------- Scrolldown -----------------*/
+	
+var $title = $('.acc_trigger');
+var copy   = '.acc_container';
+
+
+
+$title.click(function () {
+  $(this).next(copy).slideToggle();
+  $(this).parent().siblings().children().next().slideUp();
+  return false;
+});
+	
+})(jQuery);
+
+

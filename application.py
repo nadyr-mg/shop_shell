@@ -1,8 +1,9 @@
 import telebot
-from config import TOKEN, DB_NAME, BOT_USERNAME
+from random import randint, seed
+
 import utils
 from Data_base.user_db_class import Users_db
-from random import randint, seed
+from config import TOKEN, DB_NAME, BOT_USERNAME
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -298,5 +299,5 @@ def handle_reply_requisite(message):
 
 
 if __name__ == '__main__':
-    from server_startup import start_server
+    from site_directory.server_startup import start_server
     start_server(bot)

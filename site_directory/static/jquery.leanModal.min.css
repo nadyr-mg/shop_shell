@@ -1,0 +1,98 @@
+.modal_body {
+        width: 404px;
+        padding-bottom: 2px;
+        display: none;
+        background: #FFF;
+        border-radius: 5px;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        box-shadow: 0px 0px 4px rgba(0,0,0,0.7);
+        -webkit-box-shadow: 0 0 4px rgba(0,0,0,0.7);
+        -moz-box-shadow: 0 0px 4px rgba(0,0,0,0.7);
+}
+
+.modal_body .modal_header {
+        background: url(../templates/images/modal/hd-bg.html);
+        padding: 18px 18px 14px 18px;
+        border-bottom: 1px solid #CCC;
+        border-top-left-radius: 5px;
+        -moz-border-radius-topleft: 5px;
+        -webkit-border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        -moz-border-radius-topright: 5px;
+        -webkit-border-top-right-radius: 5px;
+}
+
+.modal_body .modal_header > h2 {
+    color: #444;
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 3px;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+.modal_body .txt-fld {
+    position: relative;
+    padding: 14px 20px;
+    border-bottom: 1px solid #EEE;
+    text-align: right;
+}
+
+.modal_body .btn-fld {
+    overflow: hidden;
+    padding: 12px 20px 12px;
+}
+
+.modal_body .txt-fld > label {
+    display: block;
+    float: left;
+        width: auto;
+    padding-top: 8px;
+    color: #222;
+    font-size: 15px;
+    text-align: left;
+}
+
+.modal_body .txt-fld > input {
+    width: 250px;
+    padding: 8px;
+    border-radius: 4px;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    font-size: 1.2em;
+    color: #222;
+    background: #F7F7F7;
+    outline: none;
+    border-top: 1px solid #CCC;
+    border-left: 1px solid #CCC;
+    border-right: 1px solid #E7E6E6;
+    border-bottom: 1px solid #E7E6E6;
+    font-family: 'Cuprum', sans-serif;
+}
+
+.modal_body .btn-fld  button {
+    float: right;
+    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    background: #3F9D4A;
+    border: none;
+    width: auto;
+    overflow: visible;
+    font-size: 14px;
+    color: #FFF;
+    padding: 7px 10px;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    font-weight: bold;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+}
+
+.modal_body .modal_close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: block;
+    width: 14px;
+    height: 14px;
+    background: url(../templates/images/modal/modal_close.html);
+    z-index: 2;
+}

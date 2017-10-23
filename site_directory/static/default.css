@@ -1,0 +1,417 @@
+/* ------------------------------------------------------------------ */
+/* a. Webfonts and Icon fonts
+ ------------------------------------------------------------------ */
+
+@import url('https://fonts.googleapis.com/css?family=Raleway:400,400i,500,600|Roboto:100,300,400,500,700|Dosis:300|Montserrat:300,400');
+@import url("black-tie/black-tie.html");
+@import url("font-awesome/css/font-awesome.min.html");
+@import url("fontello/css/fontello.html");
+
+
+/* ------------------------------------------------------------------
+/* c. Reset
+      Adapted from:
+      Normalize.css - https://github.com/necolas/normalize.css/
+      HTML5 Doctor Reset - html5doctor.com/html-5-reset-stylesheet/
+/* ------------------------------------------------------------------ */
+
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+abbr, address, cite, code,
+del, dfn, em, img, ins, kbd, q, samp,
+small, strong, sub, sup, var,
+b, i,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section, summary,
+time, mark, audio, video {
+   margin: 0;
+   padding: 0;
+   border: 0;
+   outline: 0;
+   font-size: 100%;
+   vertical-align: baseline;
+   background: transparent;
+   position: relative;
+}
+
+article,aside,details,figcaption,figure,
+footer,header,hgroup,menu,nav,section {
+   display: block;
+}
+
+audio,
+canvas,
+video {
+   display: inline-block;
+}
+
+audio:not([controls]) {
+   display: none;
+   height: 0;
+}
+
+[hidden] { display: none; }
+
+code, kbd, pre, samp {
+   font-family: 'Cuprum', sans-serif;
+   font-size: 1em;
+}
+
+pre {
+   white-space: pre;
+   white-space: pre-wrap;
+   word-wrap: break-word;
+   font-size: 23px;
+}
+
+
+blockquote, q{display:block;float:left;font-size:13px;font-style: italic;color: #47505E;line-height:21px;padding:12px 32px 24px 0px;}
+blockquote:before,q:before{content:'\f10d';font-family: 'FontAwesome';color: #8D96A7;}
+blockquote:after, q:after{content:'\f10e';font-family: 'FontAwesome';color: #8D96A7;}
+
+
+
+ins {
+   background-color: #ff9;
+   color: #000;
+   text-decoration: none;
+}
+
+mark {
+   background-color: #A7F4F6;
+   color: #555;
+}
+
+del { text-decoration: line-through; }
+
+abbr[title], dfn[title] {
+   border-bottom: 1px dotted;
+   cursor: help;
+}
+
+table {
+   border-collapse: collapse;
+   border-spacing: 0;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* d. Default and Basic Styles
+      Adapted from:
+      Skeleton CSS Framework - http://www.getskeleton.com/
+      Typeplate Typographic Starter Kit - http://typeplate.com/
+/* ------------------------------------------------------------------ */
+
+/* 1. Basic  ------------------------------------------------------- */
+
+*,
+*:before,
+*:after {
+   -moz-box-sizing: border-box;
+   -webkit-box-sizing: border-box;
+   box-sizing: border-box;
+}
+
+html {font-size: 62.5%;}
+
+body {
+	background:#fff;
+	font-family: 'Cuprum', sans-serif;
+	font-weight: 400;
+	letter-spacing: 0.05em;
+	font-size: 13px;
+	line-height: 19px;
+	color: #ffffff;
+	min-width: 100%;
+	-webkit-font-smoothing: antialiased; /* Fix for webkit rendering */
+	-webkit-text-size-adjust: 100%;
+}
+
+/* 2. Typography
+      Vertical rhythm with leading derived from 6
+--------------------------------------------------------------------- */
+
+h1, h2, h3, h4, h5, h6 {
+	color: #ffffff;
+	font-family: 'Cuprum', sans-serif;
+	/* font-weight: normal; */
+	/* font-size: 13px; */
+	/* line-height: 24px; */
+	/* background: rgba(160, 17, 17, 0.64); */
+	/* font-weight: normal; */
+	/* padding: 15px 15px 15px 15px; */
+	/* width: 900px; */
+	/* left: 3.7%; */
+	/* margin: 0px 0 0 -125px; */
+	/* margin-top: 150px; */
+}
+h1 a, h2 a, h3 a, h4 a, h5 a, h6 a { font-weight: inherit; }
+h1 { font-size: 38px; line-height: 42px;letter-spacing: -1px; }
+h2 { font-size: 28px; line-height: 36px;}
+h3 {font-size: 22px;line-height: 30px;}
+h4 { font-size: 20px; line-height: 30px;}
+h5 { font-size: 18px; line-height: 30px;}
+h6 { font-size: 14px; line-height: 30px;}
+.subheader { }
+
+p,b,span,label,small,strong {font-family: Courier New;}
+p img { margin: 0; }
+p.lead {
+   font: 19px/36px 'Raleway', sans-serif;
+   margin-bottom: 18px;
+}
+
+/*  3. Links  ------------------------------------------------------- */
+
+a, a:visited {
+   text-decoration: none;
+   outline: 0;
+   color: #ffffff;
+   -webkit-transition: color .3s ease-in-out;
+   -moz-transition: color .3s ease-in-out;
+   -o-transition: color .3s ease-in-out;
+   transition: color .3s ease-in-out;
+}
+a:hover, a:focus { color: #26ab93; }
+p a, p a:visited {line-height: inherit;color: #ffffff;}
+
+
+/*  4. List  --------------------------------------------------------- */
+
+ul, ol { margin-bottom: 24px; margin-top: 12px; }
+ul { list-style: none outside; }
+ol { list-style: decimal; }
+ol, ul.square, ul.circle, ul.disc { margin-left: 30px; }
+ul.square { list-style: square outside; }
+ul.circle { list-style: circle outside; }
+ul.disc { list-style: disc outside; }
+ul ul, ul ol,
+ol ol, ol ul { margin: 6px 0 6px 30px; }
+ul ul li, ul ol li,
+ol ol li, ol ul li { margin-bottom: 6px; }
+li { line-height: 18px; margin-bottom: 12px; }
+ul.large li { }
+li p { }
+
+/* 5. Media   --------------------------------------------------------- */
+
+img,
+video,
+iframe,
+embed,
+object {
+   max-width: 100%;
+   height: auto;
+}
+
+/* 6. Row   --------------------------------------------------------- */
+.row{display:block;width: 100%;margin:0 auto;color: #fff;}
+.row:before,
+.row:after {
+    content: "";
+    display: table;
+}
+.row:after {
+    clear: both;
+}
+.column, .columns {
+   position: relative;
+   padding: 0 18px;
+   min-height: 1px;
+   float: left;
+}
+.column.centered, .columns.centered  {
+    float: none;
+    margin: 0 auto;
+}
+/* removed gutters */
+.row.collapsed > .column,
+.row.collapsed > .columns,
+.column.collapsed, .columns.collapsed  { padding: 0; }
+
+[class*="column"] + [class*="column"]:last-child {/* float: right; */}
+[class*="column"] + [class*="column"].end { float: right; }
+
+/* column widths */
+.row .one         { width: 8.33333%; }
+.row .two         { width: 16.66667%; }
+.row .three       { width: 25%; }
+.row .four        {width: 24.33333%;margin-left: 90px;}
+.row .five        { width: 41.66667%; }
+.row .six         { width: 50%; }
+.row .seven       { width: 58.33333%; }
+.row .eight       { width: 66.66667%; }
+.row .nine        { width: 75%; }
+.row .ten         { width: 83.33333%; }
+.row .eleven      { width: 91.66667%; }
+.row .twelve      { width: 100%; }
+
+.left{float:left;}
+.right{float:right;}
+.right:after {
+   content: '';
+   content: none;
+   display:block;
+   clear:both;
+}
+
+/* 7. Moving   --------------------------------------------------------- */
+.smoothing-3{transition:All .3s ease;	-webkit-transition:All .3s ease;}
+.s3{transition:All .3s ease;	-webkit-transition:All .3s ease;}
+.s2{transition:All .2s ease;	-webkit-transition:All .2s ease;}
+.s1{transition:All .1s ease;	-webkit-transition:All .1s ease;}
+
+.sml{display:inline-block;border-radius: 20px;box-shadow:0 0 0 1px #00CDAF;padding:6px 12px;font-size:10px;text-transform: uppercase;font-weight:700;line-height:18px;font-family: 'Cuprum', sans-serif;}
+.sml{display:inline-block;border-radius: 20px;box-shadow:0 0 0 1px #26ab93;padding:6px 12px;font-size:10px;text-transform: uppercase;font-weight:700;line-height:18px;font-family: 'Cuprum', sans-serif;}
+
+section input[type='text'], section input[type='email'],section input[type='password'], section textarea, header input[type='text'], header input[type='email'], header textarea, footer input[type='text'], footer input[type='email'], footer textarea {
+    display:inline-block;width:100%;margin:6px 0;
+    padding: 12px;
+    line-height: normal;
+    font-size: 13px;
+    line-height:19px;
+    color: #676c7b;
+    border-radius: 4px;
+    border: solid 1px #e1e3e6;
+}
+
+input[type="submit"]{display:block;width:100%;background:#00CDAF;border:0;outline:0;color:#fff;text-transform: uppercase;font-size:11px;font-weight:600;line-height:41px;border-radius:3px;margin:6px 0;letter-spacing: 0.02em;}
+
+
+/* -----------------------------keyframe ----------------------------*/
+
+@-webkit-keyframes zoombg {
+    0%, 100% {
+        -webkit-transform: scale(1.2);
+        transform: scale(1.2);
+    }
+
+    50% {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+    }
+}
+
+@-moz-keyframes zoombg {
+    0%, 100% {
+        -moz-transform: scale(1.2);
+        transform: scale(1.2);
+    }
+
+    50% {
+        -moz-transform: scale(1);
+        transform: scale(1);
+    }
+}
+
+@-o-keyframes zoombg {
+    0%, 100% {
+        -o-transform: scale(1.2);
+        transform: scale(1.2);
+    }
+
+    50% {
+        -o-transform: scale(1);
+        transform: scale(1);
+    }
+}
+
+@keyframes zoombg {
+    0%, 100% {
+        -webkit-transform: scale(1.2);
+        -moz-transform: scale(1.2);
+        -o-transform: scale(1.2);
+        transform: scale(1.2);
+    }
+
+    50% {
+        -webkit-transform: scale(1);
+        -moz-transform: scale(1);
+        -o-transform: scale(1);
+        transform: scale(1);
+    }
+}
+
+
+
+.background {
+  position: absolute;
+  width: 100%;
+  overflow: hidden;
+  height: 100%; 
+}
+.background--top {
+  opacity: 0.2;
+}
+.background--mid {
+  opacity: 0.35;
+}
+.background--bot {
+    opacity: 0.4;
+}
+
+.wave {
+  position: absolute;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background-repeat: repeat no-repeat;
+  background-position: 0 bottom;
+  will-change: transform;
+  -webkit-transform-origin: center bottom;
+          transform-origin: center bottom;
+}
+.wave--top {
+  -webkit-animation: move_wave 7s linear infinite;
+          animation: move_wave 7s linear infinite;
+  background-image: url("img/wave-top.html");
+  background-size: 50% 100px;
+}
+.wave--mid {
+  -webkit-animation: move_wave 12s linear infinite;
+          animation: move_wave 12s linear infinite;
+  background-image: url("img/wave-mid.html");
+  background-size: 50% 120px;
+}
+.wave--bot {
+  -webkit-animation: move_wave 15s linear infinite;
+          animation: move_wave 15s linear infinite;
+  background-image: url("img/wave-bot.html");
+  background-size: 50% 100px;
+}
+
+@-webkit-keyframes move_wave {
+  0% {
+    -webkit-transform: translateX(0) scaleY(1);
+            transform: translateX(0) scaleY(1);
+  }
+  50% {
+    -webkit-transform: translateX(-25%) scaleY(0.55);
+            transform: translateX(-25%) scaleY(0.55);
+  }
+  100% {
+    -webkit-transform: translateX(-50%) scaleY(1);
+            transform: translateX(-50%) scaleY(1);
+  }
+}
+
+@keyframes move_wave {
+  0% {
+    -webkit-transform: translateX(0) scaleY(1);
+            transform: translateX(0) scaleY(1);
+  }
+  50% {
+    -webkit-transform: translateX(-25%) scaleY(0.55);
+            transform: translateX(-25%) scaleY(0.55);
+  }
+  100% {
+    -webkit-transform: translateX(-50%) scaleY(1);
+            transform: translateX(-50%) scaleY(1);
+  }
+}
+
+
+.paid-out-float{display:block;width:100px;height:48px;background:url(img/blankRibbon-right.html) no-repeat center center;background-size:cover;-webkit-background-size:cover;top:12%;right:0;position: fixed;color:#fff!important;font-weight:900;font-size:11px;padding:6px 0 0 20px;}
