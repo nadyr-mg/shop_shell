@@ -29,9 +29,10 @@ def parse_result():
     return "CHECKKK"
 
 
-bot.remove_webhook()
-sleep(1)
-bot.set_webhook(url="https://{}:{}/{}".format(config.WEBHOOK_HOST, config.WEBHOOK_PORT, config.TOKEN),
-                certificate=open(config.WEBHOOK_SSL_CERT, 'rb'))
+if __name__ == "__main__":
+    bot.remove_webhook()
+    sleep(1)
+    bot.set_webhook(url="https://{}:{}/{}".format(config.WEBHOOK_HOST, config.WEBHOOK_PORT, config.TOKEN),
+                    certificate=open(config.WEBHOOK_SSL_CERT, 'rb'))
 
-application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
+    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
