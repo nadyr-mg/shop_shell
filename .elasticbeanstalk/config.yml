@@ -1,12 +1,12 @@
 branch-defaults:
   master:
-    environment: flask-trade-bot-env
+    environment: trade-bot-dev
     group_suffix: null
 global:
-  application_name: flask_trade_bot
+  application_name: trade_bot
   branch: null
-  default_ec2_keyname: trade_bot
-  default_platform: Python 3.4 (Preconfigured - Docker)
+  default_ec2_keyname: null
+  default_platform: Python 3.4
   default_region: us-east-2
   include_git_submodules: true
   instance_profile: null
