@@ -298,9 +298,8 @@ def handle_reply_requisite(message):
 # </editor-fold>
 
 
-if __name__ == '__main__':
-    from site_directory.server_startup import start_server
-    from flask import Flask
+from site_directory.server_startup import start_server
+from flask import Flask
 
-    application = Flask(__name__)
-    start_server(application, bot)
+application = Flask(__name__)
+start_server(application, bot)
