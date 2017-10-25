@@ -11,12 +11,7 @@ bot = get_bot()
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
     bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
-    return '', 200
-
-
-@application.route('/.well-known/acme-challenge/<token>')
-def parse_cert(token):
-    return 'success', 200
+    return 'OK', 200
 
 
 @application.route('/')
@@ -37,6 +32,6 @@ def parse_result():
 if __name__ == "__main__":
     bot.remove_webhook()
     sleep(1)
-    bot.set_webhook(url="https://{}/{}".format(config.EBCLI_ADDRESS, config.TOKEN))
+    bot.set_webhook(url="https://{}/{}".format(config.EBCLI_DOMAIN, config.TOKEN))
 
     application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
