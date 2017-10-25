@@ -8,15 +8,14 @@ application = Flask(__name__)
 bot = bot_instance.get_bot()
 
 
-# @application.route('/{}'.format(config.TOKEN), methods=['POST', 'GET'])
-# def parse_request():
-#     bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
-#     return 'OK', 200
-
-
 @application.route('/{}'.format(config.TOKEN), methods=['POST', 'GET'])
-def parse_test():
-    return 'OK', 200
+def parse_request():
+    text = 'OK'
+    try:
+        bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+    except Exception as e:
+        text = str(e)
+    return text, 200
 
 
 @application.route('/')
