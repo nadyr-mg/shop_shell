@@ -14,6 +14,11 @@ def parse_request():
     return 'OK', 200
 
 
+@application.route('/test', methods=['POST', 'GET'])
+def parse_test():
+    return 'OK', 200
+
+
 @application.route('/')
 def parse_index():
     return render_template('index.html')
