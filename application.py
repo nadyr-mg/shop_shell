@@ -11,7 +11,7 @@ bot = bot_instance.get_bot()
 @application.route('/{}'.format(config.TOKEN), methods=['POST', 'GET'])
 def parse_request():
     bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
-    return '', 200
+    return 'OK', 200
 
 
 @application.route('/')
