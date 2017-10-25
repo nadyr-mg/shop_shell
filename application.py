@@ -1,11 +1,11 @@
 import config
-from bot_instance import get_bot
+import bot_instance
 from telebot import types
 from flask import Flask, request, render_template
 from time import sleep
 
 application = Flask(__name__)
-bot = get_bot()
+bot = bot_instance.get_bot()
 
 
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
