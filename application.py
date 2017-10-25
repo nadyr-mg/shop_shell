@@ -8,7 +8,7 @@ application = Flask(__name__)
 bot = bot_instance.get_bot()
 
 
-@application.route('/{}'.format(config.TOKEN), methods=['POST'])
+@application.route('/{}'.format(config.TOKEN), methods=['POST', 'GET'])
 def parse_request():
     bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
@@ -27,6 +27,12 @@ def parse_about():
 @application.route('/check.php')
 def parse_result():
     return "CHECKKK"
+
+
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    chat = message.chat
+    bot.send_message(chat.id, "This bot can work only in private chats")
 
 
 if __name__ == "__main__":

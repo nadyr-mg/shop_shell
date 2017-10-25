@@ -7,6 +7,7 @@ from config import TOKEN, DB_NAME, BOT_USERNAME
 
 bot = telebot.TeleBot(TOKEN)
 
+
 # <editor-fold desc="Standard commands">
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -35,6 +36,7 @@ def start_command(message):
     else:
         bot.send_message(chat.id, "This bot can work only in private chats")
         bot.leave_chat(chat.id)
+
 
 @bot.message_handler(commands=['menu'])
 def start_command(message):
