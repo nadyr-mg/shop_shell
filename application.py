@@ -14,6 +14,11 @@ def parse_request():
     return '', 200
 
 
+@application.route('/.well-known/acme-challenge/<token>')
+def parse_cert(token):
+    return 'success', 200
+
+
 @application.route('/')
 def parse_index():
     return render_template('index.html')
