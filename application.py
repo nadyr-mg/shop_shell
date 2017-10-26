@@ -13,30 +13,32 @@ application = Flask(__name__)
 
 
 # <editor-fold desc="Server's handlers">
-def include_servers_handlers():
-    @application.route('/{}'.format(TOKEN), methods=['POST'])
-    def parse_request():
-        text = 'ok'
-        error = ''
-        try:
-            text = request.stream.read().decode("utf-8")
-            bot.send_message(139263421, text)
-            bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-        except Exception as e:
-            error = str(e)
-        return "text: {}, error: {}".format(text, error), 200
+@application.route('/{}'.format(TOKEN), methods=['POST'])
+def parse_request():
+    text = 'ok'
+    error = ''
+    try:
+        text = request.stream.read().decode("utf-8")
+        bot.send_message(139263421, text)
+        bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    except Exception as e:
+        error = str(e)
+    return "text: {}, error: {}".format(text, error), 200
 
-    @application.route('/')
-    def parse_index():
-        return render_template('index.html')
 
-    @application.route('/about.html')
-    def parse_about():
-        return render_template('about.html')
+@application.route('/')
+def parse_index():
+    return render_template('index.html')
 
-    @application.route('/check.php')
-    def parse_result():
-        return "CHECKKK"
+
+@application.route('/about.html')
+def parse_about():
+    return render_template('about.html')
+
+
+@application.route('/check.php')
+def parse_result():
+    return "CHECKKK"
 # </editor-fold>
 
 
@@ -339,8 +341,6 @@ def handle_reply_requisite(message):
 
 
 if __name__ == '__main__':
-    include_servers_handlers()
-
     bot.remove_webhook()
     sleep(1)
     bot.set_webhook(url="https://{}/{}".format(EBCLI_DOMAIN, TOKEN))
