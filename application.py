@@ -10,7 +10,11 @@ bot = bot_instance.get_bot()
 
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
-    bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+    try:
+        bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+    except Exception as e:
+        with open('log.txt', 'r') as out:
+            out.write(e)
     return '', 200
 
 
@@ -39,6 +43,6 @@ if __name__ == "__main__":
     bot.remove_webhook()
     sleep(1)
     bot.set_webhook(url="https://{}/{}".format(config.EBCLI_DOMAIN, config.TOKEN),
-                    certificate=open("./SSL_certificate/cert.pem", 'rb'))
+                    certificate=open("./SSL_certificate/fullchain.pem", 'rb'))
 
     application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
