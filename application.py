@@ -8,14 +8,10 @@ application = Flask(__name__)
 bot = bot_instance.get_bot()
 
 
-@application.route('/{}'.format(config.TOKEN), methods=['POST', 'GET'])
+@application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
-    text = 'OK'
-    try:
-        bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
-    except Exception as e:
-        text = str(e)
-    return text, 200
+    bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return '', 200
 
 
 @application.route('/')
@@ -42,7 +38,6 @@ def start_command(message):
 if __name__ == "__main__":
     bot.remove_webhook()
     sleep(1)
-    bot.set_webhook(url="https://{}/{}".format(config.EBCLI_DOMAIN, config.TOKEN),
-                    certificate=open(config.WEBHOOK_SSL_CERT, 'rb'))
+    bot.set_webhook(url="https://{}/{}/".format(config.EBCLI_DOMAIN, config.TOKEN))
 
     application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
