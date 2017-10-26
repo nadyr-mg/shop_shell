@@ -8,14 +8,17 @@ import utils
 from Data_base.user_db_class import Users_db
 from config import EBCLI_DOMAIN, WEBHOOK_LISTEN, WEBHOOK_PORT, TOKEN, DB_NAME, BOT_USERNAME
 
-bot = telebot.TeleBot(TOKEN, num_threads=1)
+bot = telebot.TeleBot(TOKEN, threaded=False)
 application = Flask(__name__)
 
 
 # <editor-fold desc="Server's handlers">
 @application.route('/{}'.format(TOKEN), methods=['POST'])
 def parse_request():
-    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    try:
+        bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    except Exception as e:
+        bot.send_message(139263421, str(e))
     return '', 200
 
 
