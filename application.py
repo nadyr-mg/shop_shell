@@ -8,7 +8,7 @@ import utils
 from Data_base.user_db_class import Users_db
 from config import EBCLI_DOMAIN, WEBHOOK_LISTEN, WEBHOOK_PORT, TOKEN, DB_NAME, BOT_USERNAME
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
+bot = telebot.TeleBot(TOKEN, num_threads=1)
 application = Flask(__name__)
 
 
