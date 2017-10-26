@@ -10,12 +10,12 @@ bot = bot_instance.get_bot()
 
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
+    text = 'ok'
     try:
         bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
     except Exception as e:
-        with open('log.txt', 'r') as out:
-            out.write(e)
-    return '', 200
+        text = str(e)
+    return text, 200
 
 
 @application.route('/')
