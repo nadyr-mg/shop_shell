@@ -12,7 +12,8 @@ bot = bot_instance.get_bot()
 def parse_request():
     text = 'ok'
     try:
-        bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+        text = request.stream.read().decode("utf-8")
+        # bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
     except Exception as e:
         text = str(e)
     return text, 200
