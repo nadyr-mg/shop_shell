@@ -15,7 +15,6 @@ application = Flask(__name__)
 # <editor-fold desc="Server's handlers">
 @application.route('/{}'.format(TOKEN), methods=['POST'])
 def parse_request():
-    bot.send_message(139263421, str(telebot.types.Update.de_json(request.stream.read().decode("utf-8"))))
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
 
