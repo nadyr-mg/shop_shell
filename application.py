@@ -42,6 +42,7 @@ def start_command(message):
 if __name__ == "__main__":
     bot.remove_webhook()
     sleep(1)
-    bot.set_webhook(url="https://{}/{}".format(config.EBCLI_DOMAIN, config.TOKEN))
+    bot.set_webhook(url="https://{}/{}".format(config.EBCLI_DOMAIN, config.TOKEN),
+                    certificate=open("./SSL_certificate/cert.pem", 'rb'))
 
     application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
