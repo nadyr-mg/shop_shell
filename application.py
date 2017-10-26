@@ -1,11 +1,43 @@
 import telebot
+from flask import Flask, request, render_template
+
 from random import randint, seed
+from time import sleep
 
 import utils
 from Data_base.user_db_class import Users_db
-from config import TOKEN, DB_NAME, BOT_USERNAME
+from config import EBCLI_DOMAIN, WEBHOOK_LISTEN, WEBHOOK_PORT, TOKEN, DB_NAME, BOT_USERNAME
 
 bot = telebot.TeleBot(TOKEN)
+application = Flask(__name__)
+
+
+# <editor-fold desc="Server's handlers">
+def include_servers_handlers():
+    @application.route('/{}'.format(TOKEN), methods=['POST'])
+    def parse_request():
+        text = 'ok'
+        error = ''
+        try:
+            text = request.stream.read().decode("utf-8")
+            bot.send_message(139263421, text)
+            bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+        except Exception as e:
+            error = str(e)
+        return "text: {}, error: {}".format(text, error), 200
+
+    @application.route('/')
+    def parse_index():
+        return render_template('index.html')
+
+    @application.route('/about.html')
+    def parse_about():
+        return render_template('about.html')
+
+    @application.route('/check.php')
+    def parse_result():
+        return "CHECKKK"
+# </editor-fold>
 
 
 # <editor-fold desc="Standard commands">
@@ -307,6 +339,10 @@ def handle_reply_requisite(message):
 
 
 if __name__ == '__main__':
-    from server_startup import start_server
-    application = None
-    start_server(application, bot)
+    include_servers_handlers()
+
+    bot.remove_webhook()
+    sleep(1)
+    bot.set_webhook(url="https://{}/{}".format(EBCLI_DOMAIN, TOKEN))
+
+    application.run(host=WEBHOOK_LISTEN, port=WEBHOOK_PORT)
