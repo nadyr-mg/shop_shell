@@ -15,13 +15,7 @@ application = Flask(__name__)
 # <editor-fold desc="Server's handlers">
 @application.route('/{}'.format(TOKEN), methods=['POST'])
 def parse_request():
-    text = 'ok'
-    error = ''
-    try:
-        bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-    except Exception as e:
-        error = str(e)
-    bot.send_message(139263421, "text: {}, error: {}".format(text, error))
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
 
 
