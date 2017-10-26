@@ -18,12 +18,11 @@ def parse_request():
     text = 'ok'
     error = ''
     try:
-        text = request.stream.read().decode("utf-8")
-        bot.send_message(139263421, text)
         bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     except Exception as e:
         error = str(e)
-    return "text: {}, error: {}".format(text, error), 200
+    bot.send_message(139263421, "text: {}, error: {}".format(text, error))
+    return '', 200
 
 
 @application.route('/')
