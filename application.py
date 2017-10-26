@@ -16,8 +16,6 @@ application = Flask(__name__)
 @application.route('/{}'.format(TOKEN), methods=['POST'])
 def parse_request():
     try:
-        from os import curdir
-        bot.send_message(139263421, str(curdir))
         bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     except Exception as e:
         bot.send_message(139263421, str(e))
