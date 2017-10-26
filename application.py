@@ -11,12 +11,14 @@ bot = bot_instance.get_bot()
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
     text = 'ok'
+    error = ''
     try:
         text = request.stream.read().decode("utf-8")
-        # bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
+        bot.send_message(139263421, text)
+        bot.process_new_updates([types.Update.de_json(request.stream.read().decode("utf-8"))])
     except Exception as e:
-        text = str(e)
-    return text, 200
+        error = str(e)
+    return "text: {}, error: {}".format(text, error), 200
 
 
 @application.route('/')
