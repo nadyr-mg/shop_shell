@@ -6,19 +6,19 @@ from time import sleep
 
 import utils
 from Data_base.user_db_class import Users_db
-from config import EBCLI_DOMAIN, WEBHOOK_LISTEN, WEBHOOK_PORT, TOKEN, DB_NAME, BOT_USERNAME
+import config
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
+bot = telebot.TeleBot(config.TOKEN, threaded=False)
 application = Flask(__name__)
+bot.remove_webhook()
+sleep(1)
+bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMEN, config.TOKEN))
 
 
 # <editor-fold desc="Server's handlers">
-@application.route('/{}'.format(TOKEN), methods=['POST'])
+@application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def parse_request():
-    try:
-        bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-    except Exception as e:
-        bot.send_message(139263421, str(e))
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
 
 
@@ -34,7 +34,7 @@ def parse_about():
 
 @application.route('/check.php')
 def parse_result():
-    return "CHECKKK"
+    return "CHECKKK9"
 # </editor-fold>
 
 
@@ -45,7 +45,7 @@ def start_command(message):
     if chat.type == "private":
         bot.send_message(chat.id, "Hello, {}! Please select your language:".format(chat.first_name),
                          reply_markup=utils.get_keyboard("lang_keyboard"))
-        users_db = Users_db(DB_NAME)
+        users_db = Users_db(config.DB_NAME)
         # Handle inserting user's statistics and ref_program info
         if not users_db.is_exist_stats(chat.id):
             users_db.insert_stats((chat.id, 0.0, 0.0, 0.0, 1))
@@ -71,7 +71,7 @@ def start_command(message):
 @bot.message_handler(commands=['menu'])
 def start_command(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     bot.send_message(chat.id, "...", reply_markup=utils.get_keyboard("main_keyboard", is_eng))
@@ -90,7 +90,7 @@ def handle_language(message):
         text = "Вы выбрали русский язык"
     bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng))
 
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     users_db.update_stats_field(chat.id, 'is_eng', int(is_eng))
     users_db.close()
 
@@ -98,7 +98,7 @@ def handle_language(message):
 @bot.message_handler(func=lambda message: message.text == "📈 Statistics" or message.text == "📈 Статистика")
 def handle_statistics(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     user_stats = users_db.select_stats(chat.id)
     users_db.close()
     if user_stats[4]:
@@ -114,7 +114,7 @@ def handle_statistics(message):
     func=lambda message: message.text == "👥 Referral program" or message.text == "👥 Реферальная программа")
 def handle_ref_program(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     ref_program_info = users_db.select_ref_all(chat.id)
     users_db.close()
@@ -136,7 +136,7 @@ def handle_ref_program(message):
 @bot.message_handler(func=lambda message: message.text == "📲 About the service" or message.text == "📲 О сервисе")
 def handle_statistics(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -149,7 +149,7 @@ def handle_statistics(message):
 @bot.message_handler(func=lambda message: message.text == "⚙ Settings" or message.text == "⚙ Настройки")
 def handle_statistics(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -165,7 +165,7 @@ def handle_statistics(message):
 @bot.callback_query_handler(func=lambda call: call.data == "🔗 Invitation link")
 def handle_invitation_link(call):
     chat = call.message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -173,7 +173,7 @@ def handle_invitation_link(call):
     else:
         text = "Ваша пригласительная ссылка:\n{}"
 
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     salt = users_db.select_salt(chat.id)
     if salt is None:
         if not users_db.insert_salt(randint(1, 1000000000), chat.id):
@@ -182,7 +182,7 @@ def handle_invitation_link(call):
     else:
         salt = salt[0]
     users_db.close()
-    invitation_link = "https://t.me/{}?start={}".format(BOT_USERNAME, salt)
+    invitation_link = "https://t.me/{}?start={}".format(config.BOT_USERNAME, salt)
     bot.send_message(chat.id, text.format(invitation_link))
 
 
@@ -195,7 +195,7 @@ def handle_change_language(call):
 @bot.callback_query_handler(func=lambda call: call.data == "💳 Payment requisites")
 def handle_change_requisites(call):
     chat = call.message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     requisites = users_db.select_requisites(chat.id)
     users_db.close()
@@ -214,7 +214,7 @@ def handle_change_requisites(call):
 @bot.callback_query_handler(func=lambda call: call.data == "🔄 Reinvest")
 def handle_change_reinvest(call):
     chat = call.message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
 
@@ -241,7 +241,7 @@ def handle_change_reinvest(call):
 @bot.callback_query_handler(func=lambda call: call.data == "👤 Set an inviter")
 def handle_change_inviter(call):
     chat = call.message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
 
     inviter = users_db.select_ref_inviter(chat.id)
@@ -267,7 +267,7 @@ def handle_change_inviter(call):
                                                                                   0] == "👤")
 def handle_reply_inviter(message):
     chat = message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     if len(message.text) < 20 and message.text.isnumeric():
         inviter_id = int(message.text)
@@ -296,7 +296,7 @@ def handle_reply_inviter(message):
     func=lambda call: call.data in ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Perfect Money"))
 def handle_requisites(call):
     chat = call.message.chat
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -316,7 +316,7 @@ def handle_reply_requisite(message):
     pay_method = message.reply_to_message.text.split()[1]
     requisite = ''.join(message.text.split())
 
-    users_db = Users_db(DB_NAME)
+    users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     if not utils.check_requisite(pay_method, requisite):
         if is_eng:
@@ -337,8 +337,4 @@ def handle_reply_requisite(message):
 
 
 if __name__ == '__main__':
-    bot.remove_webhook()
-    sleep(1)
-    bot.set_webhook(url="https://{}/{}".format(EBCLI_DOMAIN, TOKEN))
-
-    application.run(host=WEBHOOK_LISTEN, port=WEBHOOK_PORT)
+    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
