@@ -1,12 +1,23 @@
 from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
+import config
+
+import binascii
+from hashlib import sha256
+from random import choice
+
+
+ALPHABET = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+# <editor-fold desc="Keyboards info">
 keyboard_names = {
     "lang_keyboard": 0,
     "main_keyboard": 1,
     "balance_keyboard": 2,
     "ref_program_keyboard": 3,
     "settings_keyboard": 4,
-    "requisites_keyboard": 5
+    "requisites_keyboard": 5,
+    "currency_keyboard": 6
 }
 options_variants = [
     [("🇷🇺 Русский", "🇺🇸 English")],
@@ -16,10 +27,13 @@ options_variants = [
     [("🔗 Invitation link",), ("🔗 Пригласительная ссылка",)],
     [("💬 Language", "💳 Payment requisites", "👤 Set an inviter"),
      ("💬 Язык", "💳 Платежные реквизиты", "👤 Установить приглашающего")],
-    ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Perfect Money")
+    ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Perfect Money"),
+    [("USD", "BTC")]
 ]
+# </editor-fold>
 
 
+# <editor-fold desc="Generate keyboards">
 def get_keyboard(name, is_eng=None):
     keyboard_num = keyboard_names[name]
     if keyboard_num < 2:
@@ -69,8 +83,10 @@ def requisites_keyboard(name, requisites):
         keyboard.add(InlineKeyboardButton(text=options[cur_measure] + ": {}".format(requisites[cur_measure]),
                                           callback_data=options[cur_measure]))
     return keyboard
+# </editor-fold>
 
 
+# <editor-fold desc="Check requisite validity">
 def check_requisite(pay_method, requisite):
     flag = True
     if pay_method == "AdvCash" and (len(requisite) != 13 or not (requisite[0].isalpha() and requisite[1:].isnumeric())):
@@ -84,8 +100,10 @@ def check_requisite(pay_method, requisite):
     elif pay_method == "Perfect Money" and (len(requisite) != 9 or not (requisite[1:].isnumeric())):
         flag = False
     return flag
+# </editor-fold>
 
 
+# <editor-fold desc="Referral program functions">
 def lift_on_lines(users_db,  user_id, func, **kwargs):
     cur_id = user_id
     remember_ids = [cur_id]
@@ -108,9 +126,11 @@ def update_people_on_line(users_db, user_id, cur_line, **kwargs):
 def update_earn_on_line(users_db, user_id, cur_line, **kwargs):
     line_value = kwargs.get('line_value') * (0.08 / (2 ** (cur_line - 1)))
     users_db.update_ref_line(user_id, cur_line, line_value)
+# </editor-fold>
 
 
-def calc_percentage(value):
+# <editor-fold desc="Common functions">
+def calc_percent(value):
     percentage = 0
     if 1 <= value <= 50:
         percentage = 0.0111
@@ -125,5 +145,23 @@ def calc_percentage(value):
     return percentage
 
 
+def gen_salt():
+    chars = []
+    for i in range(8):
+        chars.append(choice(ALPHABET))
+
+    return "".join(chars)
+# </editor-fold>
+
+
+# <editor-fold desc="Functions for payeer merchant">
+def get_desc_sign(order_id, amount):
+    desc = binascii.b2a_base64(config.PAYEER_PAY_DESC.format(order_id).encode('utf8'))[:-1]
+    string_to_hash = ":".join(map(str, [config.PAYEER_MERCHANT_ID, order_id, amount, config.PAYEER_CURRENCY, desc,
+                                       config.PAYEER_SECRET_KEY]))
+    return desc, sha256(string_to_hash.encode()).hexdigest().upper()
+# </editor-fold>
+
+
 if __name__ == '__main__':
-    print(calc_percentage(1.0))
+    print(calc_percent(1.0))

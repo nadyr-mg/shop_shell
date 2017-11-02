@@ -12,29 +12,78 @@ bot = telebot.TeleBot(config.TOKEN, threaded=False)
 application = Flask(__name__)
 bot.remove_webhook()
 sleep(1)
-bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMEN, config.TOKEN))
+bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
+
+payed = False
 
 
 # <editor-fold desc="Server's handlers">
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
-def parse_request():
+def handle_request():
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
 
 
+# <editor-fold desc="Main handlers">
 @application.route('/')
-def parse_index():
+def handle_index():
     return render_template('index.html')
 
 
 @application.route('/about.html')
-def parse_about():
+def handle_about():
     return render_template('about.html')
+# </editor-fold>
 
 
-@application.route('/check.php')
-def parse_result():
-    return "CHECKKK9"
+# <editor-fold desc="Payeer handlers">
+@application.route('/gratz.php')
+def handle_success():
+    return '<b style="color:#03C159;"> Оплата прошла успешно </b>'
+
+
+@application.route('/fiasko.php')
+def handle_fail():
+    return '<b style="color:#C12503;"> В процессе оплаты произошла ошибка. Попробуйте еще раз </b>'
+
+
+@application.route('/check.php', methods=['GET', 'POST'])
+def handle_status():
+    global payed
+    if request.method == 'GET':
+        text = '<b style="color:#D7F900;"> Платеж еще обрабатывается </b>' if not payed else '<b style=' \
+                                                                        '"color:#03C159;"> Оплата прошла успешно </b>'
+        return text
+    else:
+        try:
+            payed = True
+            bot.send_message(config.HOST_ID, request.stream.read().decode("utf-8"))
+        except Exception:
+            return "Error"
+    return ""
+
+
+@application.route('/payment/<order_id>')
+def handle_payment(order_id):
+    users_db = Users_db(config.DB_NAME)
+    amount = users_db.select_repl_amount(order_id)
+    users_db.close()
+
+    if amount is None:
+        result = '<b style="color:#EE6060;"> Неправильный номер заказа </b>'
+    else:
+        amount = amount[0]
+        desc, sign = utils.get_desc_sign(order_id, amount)
+        result = render_template('make_payment.html', m_shop=config.PAYEER_MERCHANT_ID, m_orderid=order_id,
+                                 m_amount=amount, m_curr=config.PAYEER_CURRENCY, m_desc=desc, m_sign=sign)
+
+    return result
+
+
+@application.route('/payeer_421419776.txt')
+def handle_payeer_confirm():
+    return config.PAYEER_CONFIRM
+# </editor-fold>
 # </editor-fold>
 
 
@@ -75,6 +124,7 @@ def start_command(message):
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     bot.send_message(chat.id, "...", reply_markup=utils.get_keyboard("main_keyboard", is_eng))
+
 
 # </editor-fold>
 
@@ -158,6 +208,7 @@ def handle_statistics(message):
         text = "Что вы хотите изменить?"
     bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("settings_keyboard", is_eng))
 
+
 # </editor-fold>
 
 
@@ -218,7 +269,7 @@ def handle_change_reinvest(call):
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
 
-    percentage = utils.calc_percentage(balance)
+    percentage = utils.calc_percent(balance)
     if not percentage:
         if is_eng:
             text = "You don't have enough money on balance to reinvest.\nMinimum is *1 USD*"
@@ -233,6 +284,7 @@ def handle_change_reinvest(call):
     users_db.close()
 
     bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
+
 
 # </editor-fold>
 
@@ -288,6 +340,7 @@ def handle_reply_inviter(message):
 
     bot.send_message(chat.id, text)
 
+
 # </editor-fold>
 
 
@@ -309,8 +362,7 @@ def handle_requisites(call):
 
 
 @bot.message_handler(func=
-                     lambda message: message.reply_to_message is not None and message.reply_to_message.text[
-                                                                                  0] == "💳")
+                     lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "💳")
 def handle_reply_requisite(message):
     chat = message.chat
     pay_method = message.reply_to_message.text.split()[1]
@@ -332,9 +384,71 @@ def handle_reply_requisite(message):
     users_db.close()
 
     bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
+# </editor-fold>
 
+
+# <editor-fold desc="Refill interaction">
+@bot.callback_query_handler(func=lambda call: call.data == "💵 Refill")
+def handle_refill(call):
+    chat = call.message.chat
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    users_db.close()
+    if is_eng:
+        text = "Choose currency:"
+    else:
+        text = "Выберете валюту:"
+
+    bot.send_message(chat.id, text.format(call.data), reply_markup=utils.get_keyboard("currency_keyboard"))
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "USD")
+def handle_refill_usd(call):
+    chat = call.message.chat
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    users_db.close()
+    if is_eng:
+        text = "🔢 Type in desired amount:"
+    else:
+        text = "🔢 Введите желаемую сумму:"
+
+    force_reply = telebot.types.ForceReply(selective=False)
+    bot.send_message(chat.id, text.format(call.data), reply_markup=force_reply)
+
+
+@bot.message_handler(func=
+                     lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "🔢")
+def handle_refill_usd_entered(message):
+    chat = message.chat
+    try:
+        amount = round(float(message.text.strip()), 2)
+    except ValueError:
+        amount = -1
+
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    if amount > 1:
+        text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
+        btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
+
+        order_id = utils.gen_salt()
+        users_db.insert_repl_order(order_id, amount, chat.id)
+
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        keyboard.add(telebot.types.InlineKeyboardButton(text=btn_text, url="https://{}/payment/{}".format(
+                                                                        config.WEBHOOK_DOMAIN, order_id)))
+    else:
+        if amount == -1:
+            text = "🔢 Invalid amount provided" if is_eng else "🔢 Введена неправильная сумма"
+        else:
+            text = "🔢 Amount should be greater than *1$*" if is_eng else "🔢 Сумма должна быть больше *1$*"
+        keyboard = telebot.types.ForceReply(selective=False)
+    users_db.close()
+
+    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
 # </editor-fold>
 
 
 if __name__ == '__main__':
-    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
+    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT, debug=True)

@@ -6,7 +6,7 @@ class Users_db:
         self.connection = sqlite3.connect(database, isolation_level=None)
         self.cursor = self.connection.cursor()
 
-    # Statistics table
+    # <editor-fold desc="Statistics table">
     def select_stats(self, user_id):
         return self.cursor.execute('SELECT * FROM Statistics WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -41,8 +41,9 @@ class Users_db:
                                   balance = 0,
                                   invested = invested + ?
                                 WHERE user_id = ?""", (value, user_id))
+    # </editor-fold>
 
-    # Ref_program table
+    # <editor-fold desc="Ref_program table">
     def select_ref_all(self, user_id):
         return self.cursor.execute('SELECT * FROM Ref_program WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -68,8 +69,9 @@ class Users_db:
         self.cursor.execute("""UPDATE Ref_program SET 
                                   {} = IFNULL({}, 0) +  ?
                                 WHERE user_id = ?""".format(line_name, line_name), (line_value, user_id))
+    # </editor-fold>
 
-    # Salts table
+    # <editor-fold desc="Salts table">
     def select_salts_user_id(self, salt):
         return self.cursor.execute('SELECT user_id FROM Salts WHERE salt = ?', (salt,)).fetchone()
 
@@ -82,8 +84,9 @@ class Users_db:
         except sqlite3.IntegrityError:
             return False
         return True
+    # </editor-fold>
 
-    # Requisites table
+    # <editor-fold desc="Requisites table">
     def select_requisites(self, user_id):
         return self.cursor.execute('SELECT * FROM Requisites WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -102,6 +105,21 @@ class Users_db:
         self.cursor.execute("""UPDATE Requisites SET 
                                   {} = ?
                                 WHERE user_id = ?""".format(requisite_name), (requisite, user_id))
+    # </editor-fold>
+
+    # <editor-fold desc="Replenishments table">
+    def select_repl_user(self, order_id):
+        return self.cursor.execute('SELECT user_id FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()[0]
+
+    def select_repl_amount(self, order_id):
+        return self.cursor.execute('SELECT amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()
+
+    def insert_repl_order(self, order_id, amount, user_id):
+        self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?)', (order_id, amount, user_id))
+
+    def delete_repl_order(self, order_id):
+        self.cursor.execute('DELETE FROM Replenishments WHERE order_id = ?', (order_id,))
+    # </editor-fold>
 
     def close(self):
         self.connection.close()
