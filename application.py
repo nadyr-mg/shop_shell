@@ -3,6 +3,7 @@ from flask import Flask, request, render_template
 
 from random import randint, seed
 from time import sleep
+import json
 
 import utils
 from Data_base.user_db_class import Users_db
@@ -13,8 +14,6 @@ application = Flask(__name__)
 bot.remove_webhook()
 sleep(1)
 bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
-
-payed = False
 
 
 # <editor-fold desc="Server's handlers">
@@ -47,20 +46,22 @@ def handle_fail():
     return '<b style="color:#C12503;"> В процессе оплаты произошла ошибка. Попробуйте еще раз </b>'
 
 
-@application.route('/check.php', methods=['GET', 'POST'])
+@application.route('/check.php', methods=['POST'])
 def handle_status():
-    global payed
-    if request.method == 'GET':
-        text = '<b style="color:#D7F900;"> Платеж еще обрабатывается </b>' if not payed else '<b style=' \
-                                                                        '"color:#03C159;"> Оплата прошла успешно </b>'
-        return text
+    post_data = request.json
+    result = utils.check_payment(request.remote_addr, post_data)
+    if result == -1:
+        responce = "Wrong data"
     else:
-        try:
-            payed = True
-            bot.send_message(config.HOST_ID, request.stream.read().decode("utf-8"))
-        except Exception:
-            return "Error"
-    return ""
+        users_db = Users_db(config.DB_NAME)
+        if result == 0:
+            responce = post_data['m_orderid'] + '|error'
+        else:
+            responce = post_data['m_orderid'] + '|success'
+            user_id, amount = users_db.select_repl_user_amount(post_data['m_orderid'])
+            users_db.update_stats_invested(user_id, amount)
+        users_db.delete_repl_order(post_data['m_orderid'])
+    return responce
 
 
 @application.route('/payment/<order_id>')
@@ -339,8 +340,6 @@ def handle_reply_inviter(message):
     users_db.close()
 
     bot.send_message(chat.id, text)
-
-
 # </editor-fold>
 
 

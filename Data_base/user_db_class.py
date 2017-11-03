@@ -22,24 +22,24 @@ class Users_db:
 
     def update_stats_field(self, user_id, field, value):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  {} = ?
+                                  "{}" = ?
                                 WHERE user_id = ?""".format(field), (value, user_id))
 
     def update_stats_profit(self, user_id, balance, profit):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  balance = balance + ?,
-                                  profit = profit + ?
+                                  "balance" = "balance" + ?,
+                                  "profit" = "profit" + ?
                                 WHERE user_id = ?""", (balance, profit, user_id))
 
     def update_stats_invested(self, user_id, invested):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  invested = invested + ?
+                                  "invested" = "invested" + ?
                                 WHERE user_id = ?""", (invested, user_id))
 
     def update_stats_reinvest(self, user_id, value):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  balance = 0,
-                                  invested = invested + ?
+                                  "balance" = 0,
+                                  "invested" = "invested" + ?
                                 WHERE user_id = ?""", (value, user_id))
     # </editor-fold>
 
@@ -56,18 +56,18 @@ class Users_db:
     def update_ref_people_count(self, user_id, line_number, operation):
         people_name = str(line_number) + "_people"
         self.cursor.execute("""UPDATE Ref_program SET 
-                                  {} = {} {} 1
+                                  "{}" = "{}" {} 1
                                 WHERE user_id = ?""".format(people_name, people_name, operation), (user_id,))
 
     def update_ref_inviter(self, user_id, inviter):
         self.cursor.execute("""UPDATE Ref_program SET 
-                                  inviter = ?
+                                  "inviter" = ?
                                 WHERE user_id = ?""", (inviter, user_id))
 
     def update_ref_line(self, user_id, line_number, line_value):
         line_name = str(line_number) + "_line"
         self.cursor.execute("""UPDATE Ref_program SET 
-                                  {} = IFNULL({}, 0) +  ?
+                                  "{}" = IFNULL("{}", 0) + ?
                                 WHERE user_id = ?""".format(line_name, line_name), (line_value, user_id))
     # </editor-fold>
 
@@ -103,7 +103,7 @@ class Users_db:
 
     def update_requisite(self, user_id, requisite_name, requisite):
         self.cursor.execute("""UPDATE Requisites SET 
-                                  {} = ?
+                                  "{}" = ?
                                 WHERE user_id = ?""".format(requisite_name), (requisite, user_id))
     # </editor-fold>
 
@@ -113,6 +113,9 @@ class Users_db:
 
     def select_repl_amount(self, order_id):
         return self.cursor.execute('SELECT amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()
+
+    def select_repl_user_amount(self, order_id):
+        return self.cursor.execute('SELECT user_id, amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()[0]
 
     def insert_repl_order(self, order_id, amount, user_id):
         self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?)', (order_id, amount, user_id))

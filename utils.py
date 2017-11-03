@@ -8,6 +8,8 @@ from random import choice
 
 
 ALPHABET = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+post_data_fields = ("m_operation_id", "m_operation_ps", "m_operation_date", "m_operation_pay_date", "m_shop",
+                    "m_orderid", "m_amount", "m_curr", "m_desc", "m_status", "m_sign")
 
 # <editor-fold desc="Keyboards info">
 keyboard_names = {
@@ -112,7 +114,7 @@ def lift_on_lines(users_db,  user_id, func, **kwargs):
         if inviter is None or inviter in remember_ids:
             break
 
-        func(users_db, cur_line, inviter, kwargs)
+        func(users_db, inviter, cur_line, **kwargs)
 
         cur_id = inviter
         remember_ids.append(cur_id)
@@ -155,11 +157,38 @@ def gen_salt():
 
 
 # <editor-fold desc="Functions for payeer merchant">
+def adjust_float(a):
+    a = str(a)
+    dot_idx = a.find('.')
+    if dot_idx == -1:
+        a += ".00"
+    elif len(a) - dot_idx - 1 < 2:
+        a += "0"
+    return a
+
+
 def get_desc_sign(order_id, amount):
-    desc = binascii.b2a_base64(config.PAYEER_PAY_DESC.format(order_id).encode('utf8'))[:-1]
+    amount = adjust_float(amount)
+    desc = binascii.b2a_base64(config.PAYEER_PAY_DESC.encode('utf8'))[:-1].decode()
     string_to_hash = ":".join(map(str, [config.PAYEER_MERCHANT_ID, order_id, amount, config.PAYEER_CURRENCY, desc,
                                        config.PAYEER_SECRET_KEY]))
     return desc, sha256(string_to_hash.encode()).hexdigest().upper()
+
+
+def check_payment(ip_address, post_data):
+    if ip_address in config.PAYEER_TRUSTED_IPS and all(key in post_data for key in post_data_fields):
+        parameters = [post_data[post_data_fields[cur_key]] for cur_key in range(len(post_data_fields) - 1)]
+        if 'm_params' in post_data:
+            parameters.append(post_data['m_params'])
+        parameters.append(config.PAYEER_SECRET_KEY)
+
+        result_hash = sha256(":".join(parameters).encode()).hexdigest().upper()
+        if post_data['m_sign'] == result_hash:
+            if post_data['m_status'] == 'success':
+                return 1
+            else:
+                return 0
+    return -1
 # </editor-fold>
 
 
