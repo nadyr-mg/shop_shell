@@ -115,7 +115,7 @@ class Users_db:
         return self.cursor.execute('SELECT amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()
 
     def select_repl_user_amount(self, order_id):
-        return self.cursor.execute('SELECT user_id, amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()[0]
+        return self.cursor.execute('SELECT user_id, amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()
 
     def insert_repl_order(self, order_id, amount, user_id):
         self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?)', (order_id, amount, user_id))

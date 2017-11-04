@@ -177,14 +177,14 @@ def get_desc_sign(order_id, amount):
 
 def check_payment(ip_address, post_data):
     if ip_address in config.PAYEER_TRUSTED_IPS and all(key in post_data for key in post_data_fields):
-        parameters = [post_data[post_data_fields[cur_key]] for cur_key in range(len(post_data_fields) - 1)]
+        parameters = [post_data[post_data_fields[cur_key]][0] for cur_key in range(len(post_data_fields) - 1)]
         if 'm_params' in post_data:
-            parameters.append(post_data['m_params'])
+            parameters.append(post_data['m_params'][0])
         parameters.append(config.PAYEER_SECRET_KEY)
 
         result_hash = sha256(":".join(parameters).encode()).hexdigest().upper()
-        if post_data['m_sign'] == result_hash:
-            if post_data['m_status'] == 'success':
+        if post_data['m_sign'][0] == result_hash:
+            if post_data['m_status'][0] == 'success':
                 return 1
             else:
                 return 0

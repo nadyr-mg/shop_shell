@@ -3,17 +3,23 @@ from flask import Flask, request, render_template
 
 from random import randint, seed
 from time import sleep
-import json
+from urllib.parse import parse_qs
 
 import utils
 from Data_base.user_db_class import Users_db
 import config
 
-bot = telebot.TeleBot(config.TOKEN, threaded=False)
+DEBUG = 0
+
+bot = telebot.TeleBot(config.TOKEN)
 application = Flask(__name__)
 bot.remove_webhook()
 sleep(1)
-bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
+if DEBUG == 0:
+    bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
+else:
+    bot.set_webhook(url="https://{}:{}/{}".format(config.AWS_IP, config.WEBHOOK_PORT, config.TOKEN),
+                    certificate=open('./SSL_certs/webhook_cert.pem', 'rb'))
 
 
 # <editor-fold desc="Server's handlers">
@@ -48,19 +54,19 @@ def handle_fail():
 
 @application.route('/check.php', methods=['POST'])
 def handle_status():
-    post_data = request.json
+    post_data = parse_qs(request.stream.read().decode("utf-8"))
     result = utils.check_payment(request.remote_addr, post_data)
     if result == -1:
         responce = "Wrong data"
     else:
         users_db = Users_db(config.DB_NAME)
         if result == 0:
-            responce = post_data['m_orderid'] + '|error'
+            responce = post_data['m_orderid'][0] + '|error'
         else:
-            responce = post_data['m_orderid'] + '|success'
-            user_id, amount = users_db.select_repl_user_amount(post_data['m_orderid'])
+            responce = post_data['m_orderid'][0] + '|success'
+            user_id, amount = users_db.select_repl_user_amount(post_data['m_orderid'][0])
             users_db.update_stats_invested(user_id, amount)
-        users_db.delete_repl_order(post_data['m_orderid'])
+        users_db.delete_repl_order(post_data['m_orderid'][0])
     return responce
 
 
@@ -427,7 +433,7 @@ def handle_refill_usd_entered(message):
 
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
-    if amount > 1:
+    if amount > 0.1:
         text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
         btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
 
@@ -450,4 +456,8 @@ def handle_refill_usd_entered(message):
 
 
 if __name__ == '__main__':
-    application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT, debug=True)
+    if DEBUG == 0:
+        application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
+    else:
+        application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT,
+                        ssl_context=('./SSL_certs/webhook_cert.pem', './SSL_certs/webhook_pkey.pem'), debug=True)
