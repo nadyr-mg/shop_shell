@@ -19,7 +19,9 @@ keyboard_names = {
     "ref_program_keyboard": 3,
     "settings_keyboard": 4,
     "requisites_keyboard": 5,
-    "currency_keyboard": 6
+    "currency_keyboard": 6,
+    'withdraw_currency': 7,
+    "pay_sys_keyboard": 8
 }
 options_variants = [
     [("🇷🇺 Русский", "🇺🇸 English")],
@@ -27,10 +29,12 @@ options_variants = [
      ("📈 Статистика", "👥 Реферальная программа", "📲 О сервисе", "⚙ Настройки")],
     [("💵 Refill", "💸 Withdraw", "🔄 Reinvest"), ("💵 Пополнить", "💸 Вывести", "🔄 Реинвест")],
     [("🔗 Invitation link",), ("🔗 Пригласительная ссылка",)],
-    [("💬 Language", "💳 Payment requisites", "👤 Set an inviter"),
-     ("💬 Язык", "💳 Платежные реквизиты", "👤 Установить приглашающего")],
-    ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Perfect Money"),
-    [("USD", "BTC")]
+    [("💬 Language", "💳 Payment requisites", "👤 Set an inviter", "💳 Requisites examples"),
+     ("💬 Язык", "💳 Платежные реквизиты", "👤 Установить приглашающего", "💳 Примеры реквизитов")],
+    ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Yandex Money"),
+    [("USD", "BTC")],
+    [("💸 USD", "💸 BTC")],
+    [("💸 AdvCash", "💸 Payeer", "💸 Qiwi", "💸 Yandex Money")]
 ]
 # </editor-fold>
 
@@ -91,15 +95,17 @@ def requisites_keyboard(name, requisites):
 # <editor-fold desc="Check requisite validity">
 def check_requisite(pay_method, requisite):
     flag = True
-    if pay_method == "AdvCash" and (len(requisite) != 13 or not (requisite[0].isalpha() and requisite[1:].isnumeric())):
-        flag = False
+    if pay_method == "AdvCash":
+        from re import match
+        if match(r"[\w.-]+@[\w.-]+", requisite) is None:
+            flag = False
     elif pay_method == "Payeer" and (len(requisite) != 9 or not (requisite[0].isalpha() and requisite[1:].isnumeric())):
         flag = False
     elif pay_method == "Bitcoin" and len(requisite) < 20:
         flag = False
     elif pay_method == "Qiwi" and (len(requisite) < 6 or not (requisite[2:].isnumeric())):
         flag = False
-    elif pay_method == "Perfect Money" and (len(requisite) != 9 or not (requisite[1:].isnumeric())):
+    elif pay_method == "Yandex Money" and (len(requisite) != 15 or not (requisite.isnumeric())):
         flag = False
     return flag
 # </editor-fold>
@@ -128,13 +134,33 @@ def update_people_on_line(users_db, user_id, cur_line, **kwargs):
 def update_earn_on_line(users_db, user_id, cur_line, **kwargs):
     line_value = kwargs.get('line_value') * (0.08 / (2 ** (cur_line - 1)))
     users_db.update_ref_line(user_id, cur_line, line_value)
+
+
+def update_earn_on_line_btc(users_db, user_id, cur_line, **kwargs):
+    line_value_btc = kwargs.get('line_value_btc') * (0.08 / (2 ** (cur_line - 1)))
+    users_db.update_ref_line_btc(user_id, cur_line, line_value_btc)
 # </editor-fold>
 
 
 # <editor-fold desc="Common functions">
 def calc_percent(value):
     percentage = 0
-    if 1 <= value <= 50:
+    if config.MIN_REFILL_USD <= value <= 50:
+        percentage = 0.0111
+    elif 51 <= value <= 100:
+        percentage = 0.0222
+    elif 101 <= value <= 500:
+        percentage = 0.0333
+    elif 501 <= value <= 1000:
+        percentage = 0.0444
+    elif value > 1000:
+        percentage = 0.0555
+    return percentage
+
+
+def calc_percent_btc(value):
+    percentage = 0
+    if config.MIN_REFILL_BTC <= value <= 50:
         percentage = 0.0111
     elif 51 <= value <= 100:
         percentage = 0.0222

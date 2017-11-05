@@ -8,6 +8,7 @@ from urllib.parse import parse_qs
 import utils
 from Data_base.user_db_class import Users_db
 import config
+import payeer_functions
 
 DEBUG = 0
 
@@ -38,6 +39,8 @@ def handle_index():
 @application.route('/about.html')
 def handle_about():
     return render_template('about.html')
+
+
 # </editor-fold>
 
 
@@ -90,6 +93,8 @@ def handle_payment(order_id):
 @application.route('/payeer_421419776.txt')
 def handle_payeer_confirm():
     return config.PAYEER_CONFIRM
+
+
 # </editor-fold>
 # </editor-fold>
 
@@ -104,7 +109,7 @@ def start_command(message):
         users_db = Users_db(config.DB_NAME)
         # Handle inserting user's statistics and ref_program info
         if not users_db.is_exist_stats(chat.id):
-            users_db.insert_stats((chat.id, 0.0, 0.0, 0.0, 1))
+            users_db.insert_stats((chat.id, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1))
             users_db.insert_ref(chat.id)
 
         # Handle updating inviter from ref_program
@@ -159,11 +164,14 @@ def handle_statistics(message):
     user_stats = users_db.select_stats(chat.id)
     users_db.close()
     if user_stats[4]:
-        text = "Your balance: *{:.2f} USD*\n\nSum of your investments: *{:.2f} USD*\n\nProfit from the project: " \
-               "*{:.2f} USD*"
+        text = "Your balance: *{:.2f} USD*\nYour balance: *{:.5f} BTC*\n\nSum of your investments: *{:.2f} USD*\nSum " \
+               "of your investments: *{:.5f} BTC*\n\nProfit from the project: *{:.2f} USD*\n*Profit from the project: " \
+               "{:.5f} BTC* "
     else:
-        text = "Ваш баланс: *{:.2f} USD*\n\nСумма ваших инвестиций: *{:.2f} USD*\n\nПрибыль от проэкта: *{:.2f} USD*"
-    bot.send_message(chat.id, text.format(user_stats[1], user_stats[2], user_stats[3]),
+        text = "Ваш баланс: *{:.2f} USD*\nВаш баланс: *{:.5f} BTC*\n\nСумма ваших инвестиций: *{:.2f} USD*\nСумма " \
+               "ваших инвестиций: *{:.5f} BTC*\n\nПрибыль от проекта: *{:.2f} USD*\nПрибыль от проекта: *{:.5f} BTC* "
+    bot.send_message(chat.id, text.format(user_stats[1], user_stats[2], user_stats[3], user_stats[4], user_stats[5],
+                                          user_stats[6]),
                      reply_markup=utils.get_keyboard("balance_keyboard", user_stats[4]), parse_mode="Markdown")
 
 
@@ -176,17 +184,22 @@ def handle_ref_program(message):
     ref_program_info = users_db.select_ref_all(chat.id)
     users_db.close()
     if is_eng:
-        text = "Earned total: *{:.2f} USD*\n\nInvited in 1st line: *{}*\nInvited in 2nd line: *{}*\nInvited in 3rd" \
-               " line: *{}*\n\nEarned from 1st line: *{:.2f} USD*\nEarned from 2nd line: *{:.2f} USD*" \
-               "\nEarned from 3rd line: *{:.2f} USD*\n\nYour id in Telegram: *{}*"
+        text = "Earned total: *{:.2f} USD*\nEarned total: *{:.5f} BTC*\n\nInvited in 1st line: *{}*\nInvited in 2nd " \
+               "line: *{}*\nInvited in 3rd line: *{}*\n\nEarned from 1st line: *{:.2f} USD*\nEarned from 1st line: *{" \
+               ":.5f} BTC*\n\nEarned from 2nd line: *{:.2f} USD*\nEarned from 2nd line: *{:.5f} BTC*\n\nEarned from " \
+               "3rd line: *{:.2f} USD*\nEarned from 3rd line: *{:.5f} BTC*\n\nYour id in Telegram: *{}* "
     else:
-        text = "Заработано вообщем: *{:.2f} USD*\n\nПриглашенных в 1-ой линии: *{}*\nПриглашенных во 2-ой линии: *{}*" \
-               "\nПриглашенных в 3ей линии: *{}*\n\nЗаработано с 1-ой линии: *{:.2f} USD*\nЗаработано со 2-ой линии: " \
-               "*{:.2f} USD*\nЗаработано с 3-ей линии: *{:.2f} USD*\n\nВаш id в Telegram: *{}*"
+        text = "Заработано вообщем: *{:.2f} USD*\nЗаработано вообщем: *{:.5f} BTC*\n\nПриглашенных в 1-ой линии: *{" \
+               "}*\nПриглашенных во 2-ой линии: *{}*\nПриглашенных в 3-ей линии: *{}*\n\nЗаработано с 1-ой линии: *{" \
+               ":.2f} USD*\nЗаработано с 1-ой линии: *{:.5f} BTC*\n\nЗаработано со 2-ой линии: *{:.2f} " \
+               "USD*\nЗаработано со 2-ой линии: *{:.5f} BTC*\n\nЗаработано с 3-ей линии: *{:.2f} USD*\nЗаработано с " \
+               "3-ей линии: *{:.5f} BTC*\n\nВаш id в Telegram: *{}*"
     ref_program_info = tuple(map(lambda line: 0.0 if line is None else line, ref_program_info))
-    bot.send_message(chat.id, text.format(ref_program_info[2] + ref_program_info[3] + ref_program_info[4],
-                                          ref_program_info[5], ref_program_info[6], ref_program_info[7],
-                                          ref_program_info[2], ref_program_info[3], ref_program_info[4], chat.id),
+    bot.send_message(chat.id, text.format(ref_program_info[2] + ref_program_info[4] + ref_program_info[6],
+                                          ref_program_info[3] + ref_program_info[5] + ref_program_info[7],
+                                          ref_program_info[8], ref_program_info[9], ref_program_info[10],
+                                          ref_program_info[2], ref_program_info[3], ref_program_info[4],
+                                          ref_program_info[5], ref_program_info[6], ref_program_info[7], chat.id),
                      reply_markup=utils.get_keyboard("ref_program_keyboard", is_eng), parse_mode="Markdown")
 
 
@@ -269,21 +282,35 @@ def handle_change_requisites(call):
                      parse_mode="Markdown")
 
 
+@bot.callback_query_handler(func=lambda call: call.data == "💳 Requisites examples")
+def handle_requisites(call):
+    chat = call.message.chat
+    text = "*AdvCash:* advcash@gmail.com\n*Payeer:* P1000000\n*Bitcoin:* 13C3fxYMZzbt9HsTvCni779gqXyPadGtTQ\n*Qiwi:* " \
+           "+7953155XXXX\n*Yandex Money:* 410011499718000 "
+    bot.send_message(chat.id, text, parse_mode="Markdown")
+
+
 @bot.callback_query_handler(func=lambda call: call.data == "🔄 Reinvest")
 def handle_change_reinvest(call):
     chat = call.message.chat
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
+    balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
 
     percentage = utils.calc_percent(balance)
-    if not percentage:
+    percentage_btc = utils.calc_percent_btc(balance_btc)
+    if not percentage and not percentage_btc:
         if is_eng:
-            text = "You don't have enough money on balance to reinvest.\nMinimum is *1 USD*"
+            text = "You don't have enough money on balance to reinvest.\nMinimum is *{} USD* or *{} BTC*"
         else:
-            text = "У вас не достаточно средств, чтобы реинвестировать.\nМинимальная сумма: *1 USD*"
+            text = "У вас не достаточно средств, чтобы реинвестировать.\nМинимальная сумма: *{} USD* или *{} BTC*"
+        text = text.format(config.MIN_REFILL_USD, config.MIN_REFILL_BTC)
     else:
-        users_db.update_stats_reinvest(chat.id, balance * percentage)
+        if not percentage:
+            users_db.update_stats_reinvest(chat.id, balance * percentage)
+        if not percentage_btc:
+            users_db.update_stats_reinvest_btc(chat.id, balance_btc * percentage_btc)
         if is_eng:
             text = "Successfully reinvested"
         else:
@@ -346,12 +373,14 @@ def handle_reply_inviter(message):
     users_db.close()
 
     bot.send_message(chat.id, text)
+
+
 # </editor-fold>
 
 
 # <editor-fold desc="Saving requisite info interaction">
 @bot.callback_query_handler(
-    func=lambda call: call.data in ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Perfect Money"))
+    func=lambda call: call.data in ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Yandex Money"))
 def handle_requisites(call):
     chat = call.message.chat
     users_db = Users_db(config.DB_NAME)
@@ -388,7 +417,10 @@ def handle_reply_requisite(message):
             text = "Реквизит сохранен: *{}*"
     users_db.close()
 
-    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
+    bot.send_message(chat.id, text.format(requisite), reply_markup=utils.get_keyboard("main_keyboard", is_eng),
+                     parse_mode="Markdown")
+
+
 # </editor-fold>
 
 
@@ -404,7 +436,7 @@ def handle_refill(call):
     else:
         text = "Выберете валюту:"
 
-    bot.send_message(chat.id, text.format(call.data), reply_markup=utils.get_keyboard("currency_keyboard"))
+    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("currency_keyboard"))
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "USD")
@@ -414,12 +446,12 @@ def handle_refill_usd(call):
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
-        text = "🔢 Type in desired amount:"
+        text = "🔢 Type in desired amount:\n*Minimal amount is {} USD*"
     else:
-        text = "🔢 Введите желаемую сумму:"
+        text = "🔢 Введите желаемую сумму:\n*Минимальная сумма: {} USD*"
 
     force_reply = telebot.types.ForceReply(selective=False)
-    bot.send_message(chat.id, text.format(call.data), reply_markup=force_reply)
+    bot.send_message(chat.id, text.format(config.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
 
 
 @bot.message_handler(func=
@@ -433,7 +465,7 @@ def handle_refill_usd_entered(message):
 
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
-    if amount > 0.1:
+    if amount >= config.MIN_REFILL_USD:
         text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
         btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
 
@@ -442,14 +474,151 @@ def handle_refill_usd_entered(message):
 
         keyboard = telebot.types.InlineKeyboardMarkup()
         keyboard.add(telebot.types.InlineKeyboardButton(text=btn_text, url="https://{}/payment/{}".format(
-                                                                        config.WEBHOOK_DOMAIN, order_id)))
+            config.WEBHOOK_DOMAIN, order_id)))
     else:
         if amount == -1:
             text = "🔢 Invalid amount provided" if is_eng else "🔢 Введена неправильная сумма"
         else:
-            text = "🔢 Amount should be greater than *1$*" if is_eng else "🔢 Сумма должна быть больше *1$*"
+            text = "🔢 Amount should be greater than *{} USD*" if is_eng else "🔢 Сумма должна быть больше *{} USD*"
+            text = text.format(config.MIN_REFILL_USD)
         keyboard = telebot.types.ForceReply(selective=False)
     users_db.close()
+
+    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+# </editor-fold>
+
+
+# <editor-fold desc="Withdraw interaction">
+@bot.callback_query_handler(func=lambda call: call.data == "💸 Withdraw")
+def handle_withdraw(call):
+    chat = call.message.chat
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    balance = users_db.select_stats_field(chat.id, 'balance')
+    balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
+    users_db.close()
+
+    keyboard = None
+    if balance < config.MIN_WITHDRAW_USD and balance_btc < config.MIN_WITHDRAW_BTC:
+        if is_eng:
+            text = "You don't have enough money to withdraw\nMinimum is *{} USD* or *{} BTC*"
+        else:
+            text = "У вас нехватает средств для вывода\nМинимальная сумма: *{} USD* or *{} BTC*"
+        text = text.format(config.MIN_WITHDRAW_USD, config.MIN_WITHDRAW_BTC)
+    else:
+        if is_eng:
+            text = "Choose currency:"
+        else:
+            text = "Выберете валюту:"
+        keyboard = utils.get_keyboard("withdraw_currency")
+
+    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ("💸 USD", "💸 BTC"))
+def handle_withdraw_currency(call):
+    chat = call.message.chat
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+
+    keyboard = None
+    if call.data == "💸 BTC":
+        balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
+        users_db.close()
+        if balance_btc < config.MIN_WITHDRAW_BTC:
+            if is_eng:
+                text = "You don't have enough money to withdraw\nMinimum is *{} BTC*"
+            else:
+                text = "У вас нехватает средств для вывода\nМинимальная сумма: *{} BTC*"
+        else:
+            if is_eng:
+                text = "🅱 Type in desired amount:\nMinimum is *{} BTC*"
+            else:
+                text = "🅱 Укажите желаемую сумму\nМинимальная сумма: *{} BTC*"
+            keyboard = telebot.types.ForceReply(selective=False)
+        text = text.format(config.MIN_WITHDRAW_BTC)
+    else:
+        balance = users_db.select_stats_field(chat.id, 'balance')
+        users_db.close()
+        if balance < config.MIN_WITHDRAW_USD:
+            if is_eng:
+                text = "You don't have enough money to withdraw\nMinimum is *{} USD*"
+            else:
+                text = "У вас нехватает средств для вывода\nМинимальная сумма: *{} USD*"
+            text = text.format(config.MIN_WITHDRAW_USD)
+        else:
+            text = "Choose payment system:" if is_eng else "Выберете платежную систему:"
+            keyboard = utils.get_keyboard("pay_sys_keyboard")
+
+    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+@bot.callback_query_handler(
+    func=lambda call: call.data[0] == '💸' and call.data in ("💸 AdvCash", "💸 Payeer", "💸 Qiwi", "💸 Yandex Money"))
+def handle_pay_sys(call):
+    chat = call.message.chat
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    pay_sys = 'yandex' if call.data[2] == 'Y' else call.data[2:].lower()
+    requisite = users_db.select_requisite(chat.id, pay_sys)
+    users_db.close()
+
+    keyboard = None
+    if requisite is not None:
+        if is_eng:
+            text = "💲 {} chosen. Type in desired amount:\nMinimum is *{} USD*"
+        else:
+            text = "💲 {} выбран. Укажите желаемую сумму\nМинимальная сумма: *{} USD*"
+        text = text.format(call.data[2:], config.MIN_WITHDRAW_USD)
+        keyboard = telebot.types.ForceReply(selective=False)
+    else:
+        if is_eng:
+            text = "Requisite is not provided. You can change it in settings"
+        else:
+            text = "Реквизит не указан. Вы можете изменить это в настройках"
+
+    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+@bot.message_handler(func=
+                     lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "💲")
+def handle_withdraw_pay_sys_entered(message):
+    chat = message.chat
+    try:
+        amount = round(float(message.text.strip()), 2)
+    except ValueError:
+        amount = -1
+    users_db = Users_db(config.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+
+    keyboard = None
+    if amount >= config.MIN_WITHDRAW_USD:
+        pay_sys = message.reply_to_message.text[2: message.reply_to_message.text.find(' ', 2)]
+        requisite = users_db.select_requisite(chat.id, pay_sys.lower())
+        users_db.close()
+
+        if requisite is None:
+            if is_eng:
+                text = "Requisite is not provided. You can change it in settings"
+            else:
+                text = "Реквизит не указан. Вы можете изменить это в настройках"
+        else:
+            errors = payeer_functions.payout_possibility(pay_sys, requisite, amount, is_eng)
+            if errors == "":
+                errors = payeer_functions.payout(pay_sys, requisite, amount, is_eng)
+            text = errors
+    else:
+        users_db.close()
+
+        text = message.reply_to_message.text[:message.reply_to_message.text.find('.') + 2]
+        if amount == -1:
+            text += "Invalid amount provided" if is_eng else "Введена неправильная сумма"
+        else:
+            text += "Amount should be greater than *{} USD*" if is_eng else "Сумма должна быть больше *{} USD*"
+            text = text.format(config.MIN_WITHDRAW_USD)
+        keyboard = telebot.types.ForceReply(selective=False)
 
     bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
 # </editor-fold>

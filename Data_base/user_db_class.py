@@ -18,7 +18,7 @@ class Users_db:
             execute('SELECT EXISTS(SELECT user_id FROM Statistics WHERE user_id = ?)', (user_id,)).fetchone()[0]
 
     def insert_stats(self, data):
-        self.cursor.execute('INSERT INTO Statistics VALUES(?, ?, ?, ?, ?)', data)
+        self.cursor.execute('INSERT INTO Statistics VALUES(?, ?, ?, ?, ?, ?, ?, ?)', data)
 
     def update_stats_field(self, user_id, field, value):
         self.cursor.execute("""UPDATE Statistics SET 
@@ -31,15 +31,32 @@ class Users_db:
                                   "profit" = "profit" + ?
                                 WHERE user_id = ?""", (balance, profit, user_id))
 
+    def update_stats_profit_btc(self, user_id, balance_btc, profit_btc):
+        self.cursor.execute("""UPDATE Statistics SET 
+                                  "balance_btc" = "balance_btc" + ?,
+                                  "balance_btc" = "balance_btc" + ?
+                                WHERE user_id = ?""", (balance_btc, profit_btc, user_id))
+
     def update_stats_invested(self, user_id, invested):
         self.cursor.execute("""UPDATE Statistics SET 
                                   "invested" = "invested" + ?
                                 WHERE user_id = ?""", (invested, user_id))
 
+    def update_stats_invested_btc(self, user_id, invested_btc):
+        self.cursor.execute("""UPDATE Statistics SET 
+                                  "invested_btc" = "invested_btc" + ?
+                                WHERE user_id = ?""", (invested_btc, user_id))
+
     def update_stats_reinvest(self, user_id, value):
         self.cursor.execute("""UPDATE Statistics SET 
                                   "balance" = 0,
                                   "invested" = "invested" + ?
+                                WHERE user_id = ?""", (value, user_id))
+
+    def update_stats_reinvest_btc(self, user_id, value):
+        self.cursor.execute("""UPDATE Statistics SET 
+                                  "balance_btc" = 0,
+                                  "invested_btc" = "invested_btc" + ?
                                 WHERE user_id = ?""", (value, user_id))
     # </editor-fold>
 
@@ -51,7 +68,7 @@ class Users_db:
         return self.cursor.execute('SELECT inviter FROM Ref_program WHERE user_id = ?', (user_id,)).fetchone()[0]
 
     def insert_ref(self, user_id):
-        self.cursor.execute('INSERT INTO Ref_program VALUES(?, NULL, NULL, NULL, NULL, 0, 0, 0)', (user_id,))
+        self.cursor.execute('INSERT INTO Ref_program VALUES(?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0)', (user_id,))
 
     def update_ref_people_count(self, user_id, line_number, operation):
         people_name = str(line_number) + "_people"
@@ -69,6 +86,12 @@ class Users_db:
         self.cursor.execute("""UPDATE Ref_program SET 
                                   "{}" = IFNULL("{}", 0) + ?
                                 WHERE user_id = ?""".format(line_name, line_name), (line_value, user_id))
+
+    def update_ref_line_btc(self, user_id, line_number, line_value_btc):
+        line_name = str(line_number) + "_line_btc"
+        self.cursor.execute("""UPDATE Ref_program SET 
+                                  "{}" = IFNULL("{}", 0) + ?
+                                WHERE user_id = ?""".format(line_name, line_name), (line_value_btc, user_id))
     # </editor-fold>
 
     # <editor-fold desc="Salts table">
