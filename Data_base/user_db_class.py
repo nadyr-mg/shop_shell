@@ -13,6 +13,12 @@ class Users_db:
     def select_stats_field(self, user_id, field):
         return self.cursor.execute('SELECT {} FROM Statistics WHERE user_id = ?'.format(field), (user_id,)).fetchone()[0]
 
+    def select_stats_users(self):
+        return self.cursor.execute('SELECT user_id FROM Statistics').fetchall()
+
+    def select_stats_income(self, user_id):
+        return self.cursor.execute('SELECT income, income_btc FROM Statistics WHERE user_id = ?', (user_id,)).fetchone()
+
     def is_exist_stats(self, user_id):
         return self.cursor.\
             execute('SELECT EXISTS(SELECT user_id FROM Statistics WHERE user_id = ?)', (user_id,)).fetchone()[0]
@@ -25,39 +31,41 @@ class Users_db:
                                   "{}" = ?
                                 WHERE user_id = ?""".format(field), (value, user_id))
 
-    def update_stats_profit(self, user_id, balance, profit):
+    def update_stats_add_income(self, user_id):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "balance" = "balance" + ?,
-                                  "profit" = "profit" + ?
-                                WHERE user_id = ?""", (balance, profit, user_id))
+                                  "balance" = "balance" + "income",
+                                  "balance_btc" = "balance_btc" + "income_btc"
+                                WHERE user_id = ?""", (user_id,))
 
-    def update_stats_profit_btc(self, user_id, balance_btc, profit_btc):
+    def update_stats_add_to_balance(self, user_id, value, is_btc=0):
+        field = "balance"
+        if is_btc:
+            field += "_btc"
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "balance_btc" = "balance_btc" + ?,
-                                  "balance_btc" = "balance_btc" + ?
-                                WHERE user_id = ?""", (balance_btc, profit_btc, user_id))
+                                  "{}" = "{}" + ?
+                                WHERE user_id = ?""".format(field, field), (value, user_id))
 
-    def update_stats_invested(self, user_id, invested):
+    def update_stats_invested(self, user_id, invested, income):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "invested" = "invested" + ?
-                                WHERE user_id = ?""", (invested, user_id))
+                                  "invested" = "invested" + ?,
+                                  "income" = "income" + ?
+                                WHERE user_id = ?""", (invested, income, user_id))
 
-    def update_stats_invested_btc(self, user_id, invested_btc):
+    def update_stats_invested_btc(self, user_id, invested_btc, income_btc):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "invested_btc" = "invested_btc" + ?
-                                WHERE user_id = ?""", (invested_btc, user_id))
+                                  "invested_btc" = "invested_btc" + ?,
+                                  "income_btc" = "income_btc" + ?
+                                WHERE user_id = ?""", (invested_btc, income_btc, user_id))
 
-    def update_stats_reinvest(self, user_id, value):
+    def update_stats_nullify_balance(self, user_id):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "balance" = 0,
-                                  "invested" = "invested" + ?
-                                WHERE user_id = ?""", (value, user_id))
+                                  "balance" = 0
+                                WHERE user_id = ?""", (user_id,))
 
-    def update_stats_reinvest_btc(self, user_id, value):
+    def update_stats_nullify_balance_btc(self, user_id):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "balance_btc" = 0,
-                                  "invested_btc" = "invested_btc" + ?
-                                WHERE user_id = ?""", (value, user_id))
+                                  "balance_btc" = 0
+                                WHERE user_id = ?""", (user_id,))
     # </editor-fold>
 
     # <editor-fold desc="Ref_program table">
@@ -143,8 +151,26 @@ class Users_db:
     def insert_repl_order(self, order_id, amount, user_id):
         self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?)', (order_id, amount, user_id))
 
-    def delete_repl_order(self, order_id):
+    def delete_repl_by_order(self, order_id):
         self.cursor.execute('DELETE FROM Replenishments WHERE order_id = ?', (order_id,))
+    # </editor-fold>
+
+    # <editor-fold desc="Addresses table">
+    def select_addr_address(self, user_id):
+        return self.cursor.execute('SELECT address FROM Addresses WHERE user_id = ?', (user_id,)).fetchone()[0]
+
+    def insert_addr(self, user_id):
+        self.cursor.execute('INSERT INTO Addresses VALUES(?, NULL)', (user_id,))
+
+    def delete_addr_by_user(self, user_id):
+        self.cursor.execute("""UPDATE Addresses SET
+                                  "address" = NULL
+                                WHERE user_id = ?""", (user_id,))
+
+    def update_addr_by_user(self, user_id, address):
+        self.cursor.execute("""UPDATE Addresses SET
+                                  "address" = ?
+                                WHERE user_id = ?""", (address, user_id))
     # </editor-fold>
 
     def close(self):

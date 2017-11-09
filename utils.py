@@ -6,7 +6,7 @@ import binascii
 from hashlib import sha256
 from random import choice
 
-
+schedule_thread = None
 ALPHABET = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 post_data_fields = ("m_operation_id", "m_operation_ps", "m_operation_date", "m_operation_pay_date", "m_shop",
                     "m_orderid", "m_amount", "m_curr", "m_desc", "m_status", "m_sign")
@@ -112,15 +112,20 @@ def check_requisite(pay_method, requisite):
 
 
 # <editor-fold desc="Referral program functions">
-def lift_on_lines(users_db,  user_id, func, **kwargs):
+def lift_on_lines(users_db, user_id, func, **kwargs):
     cur_id = user_id
     remember_ids = [cur_id]
+    is_people = func == update_people_on_line
     for cur_line in range(1, 4):
         inviter = users_db.select_ref_inviter(cur_id)
         if inviter is None or inviter in remember_ids:
             break
 
-        func(users_db, inviter, cur_line, **kwargs)
+        if is_people:
+            func(users_db, inviter, cur_line, **kwargs)
+        else:
+            value = func(users_db, inviter, cur_line, **kwargs)
+            users_db.update_stats_add_to_balance(inviter, value, func == update_earn_on_line_btc)
 
         cur_id = inviter
         remember_ids.append(cur_id)
@@ -134,51 +139,86 @@ def update_people_on_line(users_db, user_id, cur_line, **kwargs):
 def update_earn_on_line(users_db, user_id, cur_line, **kwargs):
     line_value = kwargs.get('line_value') * (0.08 / (2 ** (cur_line - 1)))
     users_db.update_ref_line(user_id, cur_line, line_value)
+    return line_value
 
 
 def update_earn_on_line_btc(users_db, user_id, cur_line, **kwargs):
     line_value_btc = kwargs.get('line_value_btc') * (0.08 / (2 ** (cur_line - 1)))
     users_db.update_ref_line_btc(user_id, cur_line, line_value_btc)
+    return line_value_btc
+# </editor-fold>
+
+
+# <editor-fold desc="Invest handler">
+def invested(users_db, user_id, amount, is_btc=0):
+    if is_btc:
+        percent_btc = calc_percent_btc(amount)
+        users_db.update_stats_invested_btc(user_id, amount, amount * percent_btc)
+        lift_on_lines(users_db, user_id, update_earn_on_line_btc, line_value_btc=amount)
+    else:
+        percent = calc_percent(amount)
+        users_db.update_stats_invested(user_id, amount, amount * percent)
+        lift_on_lines(users_db, user_id, update_earn_on_line, line_value=amount)
 # </editor-fold>
 
 
 # <editor-fold desc="Common functions">
 def calc_percent(value):
-    percentage = 0
+    percent = 0
     if config.MIN_REFILL_USD <= value <= 50:
-        percentage = 0.0111
+        percent = 0.0111
     elif 51 <= value <= 100:
-        percentage = 0.0222
+        percent = 0.0222
     elif 101 <= value <= 500:
-        percentage = 0.0333
+        percent = 0.0333
     elif 501 <= value <= 1000:
-        percentage = 0.0444
+        percent = 0.0444
     elif value > 1000:
-        percentage = 0.0555
-    return percentage
+        percent = 0.0555
+    return percent
 
 
 def calc_percent_btc(value):
-    percentage = 0
+    percent = 0
     if config.MIN_REFILL_BTC <= value <= 50:
-        percentage = 0.0111
+        percent = 0.0111
     elif 51 <= value <= 100:
-        percentage = 0.0222
+        percent = 0.0222
     elif 101 <= value <= 500:
-        percentage = 0.0333
+        percent = 0.0333
     elif 501 <= value <= 1000:
-        percentage = 0.0444
+        percent = 0.0444
     elif value > 1000:
-        percentage = 0.0555
-    return percentage
+        percent = 0.0555
+    return percent
 
 
 def gen_salt():
     chars = []
-    for i in range(8):
+    for i in range(10):
         chars.append(choice(ALPHABET))
 
     return "".join(chars)
+
+
+def to_bitcoin(value):
+    return value / 100000000 if value != 0 else 0
+
+
+def to_satoshi(value):
+    return int(value * 100000000)
+
+
+def init_schedule(schedule):
+    global schedule_thread
+    schedule_thread = schedule
+
+
+def stop_schedule_thread():
+    global schedule_thread
+    if schedule_thread is not None:
+        schedule_thread.set()
+        schedule_thread = None
 # </editor-fold>
 
 

@@ -1,4 +1,4 @@
-import config
+from config import PAYEER_ACCOUNT, PAYEER_API_KEY, PAYEER_API_ID
 
 import json
 from urllib.request import urlopen, Request
@@ -12,9 +12,9 @@ payment_systems = {
 }
 
 global_values = {
-        'account': config.PAYEER_ACCOUNT,
-        'apiId': config.PAYEER_API_ID,
-        'apiPass': config.PAYEER_API_KEY,
+        'account': PAYEER_ACCOUNT,
+        'apiId': PAYEER_API_ID,
+        'apiPass': PAYEER_API_KEY,
         'curIn': 'USD',
         'curOut': 'USD'
     }
@@ -46,7 +46,6 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
     request = Request(api_url.format('initOutput'), data=urlencode(local_values).encode(), headers=headers)
 
     response = json.loads(urlopen(request).read())
-    print(response)
     errors = ""
     if (not isinstance(response['errors'], list) and response['errors'] is not None) \
             or (isinstance(response['errors'], list) and response['errors']):
@@ -55,38 +54,42 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
         else:
             errors += "Errors while performing payment:"
         errors += '\n'
-        for key in response['errors']:
-            if key == 'This type of exchange is not possible':
-                if not is_eng:
-                    errors += "автоматический обмен из {} в {} временно запрещен".format(local_values['curIn'],
-                                                                                       local_values['curOut'])
-                else:
-                    errors += response['errors'][key]
-                errors += '\n'
-            elif response['errors'][key] == 'invalid format':
-                if not is_eng:
-                    errors += "неправильный формат реквизита"
-                else:
-                    errors += "invalid requisite format"
-                errors += '\n'
-            elif key == 'sum_more_max':
-                if not is_eng:
-                    errors += "сумма превышает максимум"
-                else:
-                    errors += response['errors'][key]
-                errors += '\n'
-            elif key == 'balans_no':
-                if not is_eng:
-                    errors += "на счете недостаточно средств для вывода средств"
-                else:
-                    errors += response['errors'][key]
-                errors += '\n'
-            elif key == 'sum_less_min':
-                if not is_eng:
-                    temp = "минимальная сумма перевода: *{} {}*"
-                else:
-                    temp = "minimal amount for transaction is *{} {}*"
-                errors += temp.format(response['errors'][key][12:], local_values['curOut']) + '\n'
+
+        if isinstance(response['errors'], list):
+            errors += '\n'.join(response['errors'])
+        else:
+            for key in response['errors']:
+                if key == 'This type of exchange is not possible':
+                    if not is_eng:
+                        errors += "автоматический обмен из {} в {} временно запрещен".format(local_values['curIn'],
+                                                                                           local_values['curOut'])
+                    else:
+                        errors += response['errors'][key]
+                    errors += '\n'
+                elif response['errors'][key] == 'invalid format':
+                    if not is_eng:
+                        errors += "неправильный формат реквизита"
+                    else:
+                        errors += "invalid requisite format"
+                    errors += '\n'
+                elif key == 'sum_more_max':
+                    if not is_eng:
+                        errors += "сумма превышает максимум"
+                    else:
+                        errors += response['errors'][key]
+                    errors += '\n'
+                elif key == 'balans_no':
+                    if not is_eng:
+                        errors += "технические неполадки в платежной системе, попробуйте позже"
+                    else:
+                        errors += "there is technical problems in payment system, try again later"
+                    errors += '\n'
+                elif key == 'sum_less_min':
+                    if not is_eng:
+                        temp = "минимальная сумма перевода: *{} {}*"
+                    else:
+                        temp = "minimal amount for transaction is *{} {}*"
+                    errors += temp.format(response['errors'][key][12:], local_values['curOut']) + '\n'
     return errors
 
 
@@ -97,17 +100,16 @@ def payout(pay_sys, requisite, amount, is_eng):
     request = Request(api_url.format('output'), data=urlencode(local_values).encode(), headers=headers)
 
     response = json.loads(urlopen(request).read())
-    errors = ""
     if (not isinstance(response['errors'], list) and response['errors'] is not None) \
             or (isinstance(response['errors'], list) and response['errors']):
         if is_eng:
-            errors = "Something went wrong. Check validity of your requisites or try again later"
+            result = "Something went wrong. Check validity of your requisites or try again later"
         else:
-            errors = "Что-то пошло не так. Проверьте правильность введеных реквизитов или повторите попытку позднее"
+            result = "Что-то пошло не так. Проверьте правильность введеных реквизитов или повторите попытку позднее"
     else:
-        errors = "Withdraw completed successfully!" if is_eng else "Вывод завершен успешно!"
-    return errors
+        result = "Withdraw completed successfully!" if is_eng else "Вывод завершен успешно!"
+    return result
 
 
 if __name__ == '__main__':
-    print(payout('AdvCash', 'lester0578@gmail.com', 10, 1))
+    print(payout_possibility('Bitcoin', PAYEER_ACCOUNT, 2, 1))
