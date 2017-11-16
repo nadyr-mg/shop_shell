@@ -45,6 +45,14 @@ class Users_db:
                                   "{}" = "{}" + ?
                                 WHERE user_id = ?""".format(field, field), (value, user_id))
 
+    def update_stats_dec_balance(self, user_id, value, is_btc=0):
+        field = "balance"
+        if is_btc:
+            field += "_btc"
+        self.cursor.execute("""UPDATE Statistics SET 
+                                  "{}" = "{}" - ?
+                                WHERE user_id = ?""".format(field, field), (value, user_id))
+
     def update_stats_invested(self, user_id, invested, income):
         self.cursor.execute("""UPDATE Statistics SET 
                                   "invested" = "invested" + ?,
@@ -158,6 +166,9 @@ class Users_db:
     # <editor-fold desc="Addresses table">
     def select_addr_address(self, user_id):
         return self.cursor.execute('SELECT address FROM Addresses WHERE user_id = ?', (user_id,)).fetchone()[0]
+
+    def select_addr_user(self, address):
+        return self.cursor.execute('SELECT user_id FROM Addresses WHERE address = ?', (address,)).fetchone()
 
     def insert_addr(self, user_id):
         self.cursor.execute('INSERT INTO Addresses VALUES(?, NULL)', (user_id,))

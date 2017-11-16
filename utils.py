@@ -165,7 +165,7 @@ def invested(users_db, user_id, amount, is_btc=0):
 # <editor-fold desc="Common functions">
 def calc_percent(value):
     percent = 0
-    if config.MIN_REFILL_USD <= value <= 50:
+    if 0 < value <= 50:
         percent = 0.0111
     elif 51 <= value <= 100:
         percent = 0.0222
@@ -180,7 +180,7 @@ def calc_percent(value):
 
 def calc_percent_btc(value):
     percent = 0
-    if config.MIN_REFILL_BTC <= value <= 50:
+    if 0 < value <= 50:
         percent = 0.0111
     elif 51 <= value <= 100:
         percent = 0.0222

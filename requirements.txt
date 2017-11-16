@@ -19,3 +19,4 @@ six
 urllib3
 Werkzeug
 zeep
+coinbase

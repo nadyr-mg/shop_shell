@@ -1,4 +1,4 @@
-from config import PAYEER_ACCOUNT, PAYEER_API_KEY, PAYEER_API_ID
+from config import PAYEER_ACCOUNT, PAYEER_API_KEY, PAYEER_API_ID, BALANCE_USED_PART
 
 import json
 from urllib.request import urlopen, Request
@@ -11,18 +11,25 @@ payment_systems = {
     'Yandex': '57378077'
 }
 
+values_for_balance = {
+    'account': PAYEER_ACCOUNT,
+    'apiId': PAYEER_API_ID,
+    'apiPass': PAYEER_API_KEY,
+    'action': 'balance'
+}
+
 global_values = {
-        'account': PAYEER_ACCOUNT,
-        'apiId': PAYEER_API_ID,
-        'apiPass': PAYEER_API_KEY,
-        'curIn': 'USD',
-        'curOut': 'USD'
-    }
+    'account': PAYEER_ACCOUNT,
+    'apiId': PAYEER_API_ID,
+    'apiPass': PAYEER_API_KEY,
+    'curIn': 'USD',
+    'curOut': 'USD'
+}
 
 api_url = "https://payeer.com/ajax/api/api.php?{}"
 
 headers = {
-  'Content-Type': 'application/x-www-form-urlencoded'
+    'Content-Type': 'application/x-www-form-urlencoded'
 }
 
 
@@ -39,7 +46,22 @@ def init_values(pay_sys, requisite, amount):
     return local_values
 
 
+def get_balance():
+    request = Request(api_url.format('balance'), data=urlencode(values_for_balance).encode(), headers=headers)
+
+    response = json.loads(urlopen(request).read())
+    return round(float(response['balance']['USD']['BUDGET']) * BALANCE_USED_PART, 2)
+
+
 def payout_possibility(pay_sys, requisite, amount, is_eng):
+    balance = get_balance()
+    if amount > balance:
+        if not is_eng:
+            result = "Технические неполадки в платежной системе, попробуйте позже"
+        else:
+            result = "There is technical problems in payment system, try again later"
+        return result
+
     local_values = init_values(pay_sys, requisite, amount)
     local_values['action'] = 'initOutput'
 
@@ -62,7 +84,7 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
                 if key == 'This type of exchange is not possible':
                     if not is_eng:
                         errors += "автоматический обмен из {} в {} временно запрещен".format(local_values['curIn'],
-                                                                                           local_values['curOut'])
+                                                                                             local_values['curOut'])
                     else:
                         errors += response['errors'][key]
                     errors += '\n'
@@ -77,12 +99,6 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
                         errors += "сумма превышает максимум"
                     else:
                         errors += response['errors'][key]
-                    errors += '\n'
-                elif key == 'balans_no':
-                    if not is_eng:
-                        errors += "технические неполадки в платежной системе, попробуйте позже"
-                    else:
-                        errors += "there is technical problems in payment system, try again later"
                     errors += '\n'
                 elif key == 'sum_less_min':
                     if not is_eng:
@@ -112,4 +128,4 @@ def payout(pay_sys, requisite, amount, is_eng):
 
 
 if __name__ == '__main__':
-    print(payout_possibility('Bitcoin', PAYEER_ACCOUNT, 2, 1))
+    print(get_balance())
