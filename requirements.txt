@@ -20,3 +20,4 @@ urllib3
 Werkzeug
 zeep
 coinbase
+git+git://github.com/dbader/schedule.git@b4ac8ca65a3571060eb0ec0c8cb36b333c72afcd
