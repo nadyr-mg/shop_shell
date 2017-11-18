@@ -165,7 +165,7 @@ class Users_db:
 
     # <editor-fold desc="Addresses table">
     def select_addr_address(self, user_id):
-        return self.cursor.execute('SELECT address FROM Addresses WHERE user_id = ?', (user_id,)).fetchone()[0]
+        return self.cursor.execute('SELECT address FROM Addresses WHERE user_id = ?', (user_id,)).fetchone()
 
     def select_addr_user(self, address):
         return self.cursor.execute('SELECT user_id FROM Addresses WHERE address = ?', (address,)).fetchone()

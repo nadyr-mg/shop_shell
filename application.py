@@ -13,7 +13,7 @@ import config
 import payeer_functions
 import coinbase_functions
 
-DEBUG = False
+DEBUG = True
 
 bot = telebot.TeleBot(config.TOKEN)
 application = Flask(__name__)
@@ -573,7 +573,7 @@ def handle_refill_usd_entered(message):
 def handle_refill_btc(call):
     chat = call.message.chat
     users_db = Users_db(config.DB_NAME)
-    address = users_db.select_addr_address(chat.id)
+    address = users_db.select_addr_address(chat.id)[0]
     if address is None:
         address = coinbase_functions.generate_address()
         users_db.update_addr_by_user(chat.id, address)
