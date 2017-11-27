@@ -1,4 +1,5 @@
 import sqlite3
+from time import time
 
 
 class Users_db:
@@ -7,6 +8,9 @@ class Users_db:
         self.cursor = self.connection.cursor()
 
     # <editor-fold desc="Statistics table">
+    def select_stats_all(self):
+        return self.cursor.execute('SELECT * FROM Statistics').fetchall()
+
     def select_stats(self, user_id):
         return self.cursor.execute('SELECT * FROM Statistics WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -14,6 +18,9 @@ class Users_db:
         return self.cursor.execute('SELECT {} FROM Statistics WHERE user_id = ?'.format(field), (user_id,)).fetchone()[0]
 
     def select_stats_users(self):
+        return self.cursor.execute('SELECT user_id, income, income_btc, is_eng FROM Statistics').fetchall()
+
+    def select_stats_users_id(self):
         return self.cursor.execute('SELECT user_id FROM Statistics').fetchall()
 
     def select_stats_income(self, user_id):
@@ -55,14 +62,14 @@ class Users_db:
 
     def update_stats_invested(self, user_id, invested, income):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "invested" = "invested" + ?,
-                                  "income" = "income" + ?
+                                  "invested" = ?,
+                                  "income" = ?
                                 WHERE user_id = ?""", (invested, income, user_id))
 
     def update_stats_invested_btc(self, user_id, invested_btc, income_btc):
         self.cursor.execute("""UPDATE Statistics SET 
-                                  "invested_btc" = "invested_btc" + ?,
-                                  "income_btc" = "income_btc" + ?
+                                  "invested_btc" = ?,
+                                  "income_btc" = ?
                                 WHERE user_id = ?""", (invested_btc, income_btc, user_id))
 
     def update_stats_nullify_balance(self, user_id):
@@ -77,6 +84,9 @@ class Users_db:
     # </editor-fold>
 
     # <editor-fold desc="Ref_program table">
+    def select_ref_all_all(self):
+        return self.cursor.execute('SELECT * FROM Ref_program').fetchall()
+
     def select_ref_all(self, user_id):
         return self.cursor.execute('SELECT * FROM Ref_program WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -111,6 +121,9 @@ class Users_db:
     # </editor-fold>
 
     # <editor-fold desc="Salts table">
+    def select_salts_all(self):
+        return self.cursor.execute('SELECT * FROM Salts').fetchall()
+
     def select_salts_user_id(self, salt):
         return self.cursor.execute('SELECT user_id FROM Salts WHERE salt = ?', (salt,)).fetchone()
 
@@ -126,6 +139,9 @@ class Users_db:
     # </editor-fold>
 
     # <editor-fold desc="Requisites table">
+    def select_requisites_all(self):
+        return self.cursor.execute('SELECT * FROM Requisites').fetchall()
+
     def select_requisites(self, user_id):
         return self.cursor.execute('SELECT * FROM Requisites WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -147,6 +163,9 @@ class Users_db:
     # </editor-fold>
 
     # <editor-fold desc="Replenishments table">
+    def select_repl_all(self):
+        return self.cursor.execute('SELECT * FROM Replenishments').fetchall()
+
     def select_repl_user(self, order_id):
         return self.cursor.execute('SELECT user_id FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()[0]
 
@@ -156,14 +175,20 @@ class Users_db:
     def select_repl_user_amount(self, order_id):
         return self.cursor.execute('SELECT user_id, amount FROM Replenishments WHERE order_id = ?', (order_id,)).fetchone()
 
+    def select_repl_orders(self):
+        return self.cursor.execute('SELECT order_id, date FROM Replenishments').fetchall()
+
     def insert_repl_order(self, order_id, amount, user_id):
-        self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?)', (order_id, amount, user_id))
+        self.cursor.execute('INSERT INTO Replenishments VALUES(?, ?, ?, ?)', (order_id, amount, user_id, int(time())))
 
     def delete_repl_by_order(self, order_id):
         self.cursor.execute('DELETE FROM Replenishments WHERE order_id = ?', (order_id,))
     # </editor-fold>
 
     # <editor-fold desc="Addresses table">
+    def select_addr_all(self):
+        return self.cursor.execute('SELECT * FROM Addresses').fetchall()
+
     def select_addr_address(self, user_id):
         return self.cursor.execute('SELECT address FROM Addresses WHERE user_id = ?', (user_id,)).fetchone()
 
@@ -182,6 +207,41 @@ class Users_db:
         self.cursor.execute("""UPDATE Addresses SET
                                   "address" = ?
                                 WHERE user_id = ?""", (address, user_id))
+    # </editor-fold>
+
+    # <editor-fold desc="Spam control table">
+    def select_spam_cnt(self, user_id, is_lang=True):
+        field = "lang_cnt"
+        if not is_lang:
+            field = "repl_cnt"
+        return self.cursor.execute('SELECT {} FROM Spam_control WHERE user_id = ?'.format(field), (user_id,)).fetchone()
+
+    def insert_spam_record(self, user_id):
+        self.cursor.execute('INSERT INTO Spam_control VALUES(?, 0, 0)', (user_id,))
+
+    def update_spam_cnt(self, user_id, is_lang=True):
+        field = "lang_cnt"
+        if not is_lang:
+            field = "repl_cnt"
+        self.cursor.execute("""UPDATE Spam_control SET
+                                  "{}" = "{}" + 1
+                                WHERE user_id = ?""".format(field, field), (user_id,))
+
+    def nullify_spam(self):
+        self.cursor.execute("""UPDATE Spam_control SET
+                                  "lang_cnt" = 0,
+                                  "repl_cnt" = 0""")
+    # </editor-fold>
+
+    # <editor-fold desc="Rewards">
+    def select_reward_all(self):
+        return self.cursor.execute('SELECT * FROM Rewards').fetchall()
+
+    def select_reward(self, user_id):
+        return self.cursor.execute('SELECT user_id FROM Rewards WHERE user_id = ?', (user_id,)).fetchone()
+
+    def insert_reward(self, user_id):
+        self.cursor.execute('INSERT INTO Rewards VALUES(?)', (user_id,))
     # </editor-fold>
 
     def close(self):

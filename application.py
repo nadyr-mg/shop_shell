@@ -2,7 +2,7 @@ import telebot
 from flask import Flask, request, render_template
 
 from random import randint, seed
-from time import sleep
+from time import sleep, time
 from urllib.parse import parse_qs
 from json import loads
 import schedule
@@ -13,7 +13,11 @@ import config
 import payeer_functions
 import coinbase_functions
 
-DEBUG = True
+DEBUG = False
+ONE_DAY = 82800
+MAX_REQUESTS_PER_TIME = 6
+NULLIFY_AFTER = 10
+REWARD_AMOUNT = 5
 
 bot = telebot.TeleBot(config.TOKEN)
 application = Flask(__name__)
@@ -22,36 +26,31 @@ sleep(1)
 if not DEBUG:
     bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
 else:
-    bot.set_webhook(url="https://{}:{}/{}".format(config.AWS_IP, config.WEBHOOK_PORT, config.TOKEN),
+    bot.set_webhook(url="https://{}:{}/{}".format(config.SERVER_IP, config.WEBHOOK_PORT, config.TOKEN),
                     certificate=open('./SSL_certs/webhook_cert.pem', 'rb'))
 
 
 # <editor-fold desc="Server's handlers">
+# <editor-fold desc="Main handlers">
 @application.route('/{}'.format(config.TOKEN), methods=['POST'])
 def handle_request():
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
 
 
-# <editor-fold desc="Main handlers">
 @application.route('/')
 def handle_index():
     return render_template('index.html')
-
-
-@application.route('/about.html')
-def handle_about():
-    return render_template('about.html')
 # </editor-fold>
 
 
 # <editor-fold desc="Payeer handlers">
-@application.route('/gratz.php')
+@application.route('/congrats.php')
 def handle_success():
     return '<b style="color:#03C159;"> Оплата прошла успешно </b>'
 
 
-@application.route('/fiasko.php')
+@application.route('/failure.php')
 def handle_fail():
     return '<b style="color:#C12503;"> В процессе оплаты произошла ошибка. Попробуйте еще раз </b>'
 
@@ -68,12 +67,18 @@ def handle_status():
             responce = post_data['m_orderid'][0] + '|error'
         else:
             responce = post_data['m_orderid'][0] + '|success'
-            user_id, amount = users_db.select_repl_user_amount(post_data['m_orderid'][0])
+            try:
+                user_id, amount = users_db.select_repl_user_amount(post_data['m_orderid'][0])
+            except TypeError:
+                return responce
             utils.invested(users_db, user_id, amount)
 
             is_eng = users_db.select_stats_field(user_id, 'is_eng')
             text = "Successfully invested {} USD" if is_eng else "Успешно внесена сумма {} USD"
-            bot.send_message(user_id, text.format(amount))
+            try:
+                bot.send_message(user_id, text.format(amount))
+            except telebot.apihelper.ApiException:
+                pass
         users_db.delete_repl_by_order(post_data['m_orderid'][0])
         users_db.close()
     return responce
@@ -96,7 +101,7 @@ def handle_payment(order_id):
     return result
 
 
-@application.route('/payeer_421419776.txt')
+@application.route('/payeer_428636358.txt')
 def handle_payeer_confirm():
     return config.PAYEER_CONFIRM
 # </editor-fold>
@@ -122,7 +127,7 @@ def handle_status_btc():
     else:
         user_id = user_id[0]
 
-    utils.invested(users_db, user_id, amount, 1)
+    utils.invested(users_db, user_id, amount, is_btc=1)
     users_db.delete_addr_by_user(user_id)
 
     is_eng = users_db.select_stats_field(user_id, 'is_eng')
@@ -130,31 +135,52 @@ def handle_status_btc():
     text.format(amount)
     users_db.close()
 
-    bot.send_message(user_id, text.format(amount), parse_mode="Markdown")
+    try:
+        bot.send_message(user_id, text.format(amount), parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
     return "", 200
 # </editor-fold>
 # </editor-fold>
 
 
-# <editor-fold desc="Event overcharge">
-def overcharge():
+# <editor-fold desc="Schedule events">
+def overcharge_and_clean_repl():
     users_db = Users_db(config.DB_NAME)
+
+    repls = users_db.select_repl_orders()
+    for repl in repls:
+        order, date = repl
+        if int(time()) - date > ONE_DAY:
+            users_db.delete_repl_by_order(order)
+
     users = users_db.select_stats_users()
 
     text_variants = ("Вам начислена сумма дохода:\n", "You are credited with the amount of income:\n")
     for user in users:
         user_id = user[0]
-        income, income_btc = users_db.select_stats_income(user_id)
+        income, income_btc = user[1], user[2]
         if income > 0.0 or income_btc > 0:
-            is_eng = users_db.select_stats_field(user_id, 'is_eng')
+            is_eng = user[3]
             users_db.update_stats_add_income(user_id)
 
             text = text_variants[is_eng]
             if income > 0.0:
-                text += "*{} USD*".format(income)
+                text += "*{} USD* ".format(income)
             if income_btc > 0:
                 text += "*{:.8f} BTC*".format(utils.to_bitcoin(income_btc))
-            bot.send_message(user_id, text, parse_mode="Markdown")
+
+            try:
+                bot.send_message(user_id, text, parse_mode="Markdown")
+            except telebot.apihelper.ApiException:
+                pass
+    users_db.close()
+
+
+def nullify_spam_cnt():
+    users_db = Users_db(config.DB_NAME)
+    users_db.nullify_spam()
+    users_db.close()
 # </editor-fold>
 
 
@@ -163,8 +189,11 @@ def overcharge():
 def start_command(message):
     chat = message.chat
     if chat.type == "private":
-        bot.send_message(chat.id, "Hello, {}! Please select your language:".format(chat.first_name),
-                         reply_markup=utils.get_keyboard("lang_keyboard"))
+        try:
+            bot.send_message(chat.id, "Hello, {}! Please select your language:".format(chat.first_name),
+                             reply_markup=utils.get_keyboard("lang_keyboard"))
+        except telebot.apihelper.ApiException:
+            pass
         users_db = Users_db(config.DB_NAME)
         # Handle inserting user's statistics and ref_program info
         if not users_db.is_exist_stats(chat.id):
@@ -183,12 +212,23 @@ def start_command(message):
         if not users_db.is_exist_requisites(chat.id):
             users_db.insert_requisites(chat.id)
 
+        # Handle inserting user's addresses
         if users_db.select_addr_address(chat.id) is None:
             users_db.insert_addr(chat.id)
 
+        # Handle inserting user's spam cnt
+        if users_db.select_spam_cnt(chat.id) is None:
+            users_db.insert_spam_record(chat.id)
+
+        # Handle reward
+        make_reward(chat.id, REWARD_AMOUNT, users_db)
+
         users_db.close()
     else:
-        bot.send_message(chat.id, "This bot can work only in private chats")
+        try:
+            bot.send_message(chat.id, "This bot can work only in private chats")
+        except telebot.apihelper.ApiException:
+            pass
         bot.leave_chat(chat.id)
 
 
@@ -198,7 +238,10 @@ def menu_command(message):
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
-    bot.send_message(chat.id, "...", reply_markup=utils.get_keyboard("main_keyboard", is_eng))
+    try:
+        bot.send_message(chat.id, "...", reply_markup=utils.get_keyboard("main_keyboard", is_eng))
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(commands=['schedule'])
@@ -213,8 +256,10 @@ def schedule_command(message):
 
     if command == 'start':
         if utils.schedule_thread is None:
-            schedule.every().day.at("01:00").do(overcharge)
+            schedule.every().day.at("01:00").do(overcharge_and_clean_repl)
+            schedule.every(NULLIFY_AFTER).minutes.do(nullify_spam_cnt)
             utils.init_schedule(schedule.run_continuously())
+
         text = "Scheduler is running"
     elif command == 'stop':
         utils.stop_schedule_thread()
@@ -222,7 +267,10 @@ def schedule_command(message):
         text = "Scheduler is stopped"
     else:
         text = "Wrong command"
-    bot.send_message(config.HOST_ID, text)
+    try:
+        bot.send_message(config.HOST_ID, text)
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(commands=['balance'])
@@ -230,7 +278,181 @@ def balance_command(message):
     if message.chat.id != config.HOST_ID:
         return
 
-    bot.send_message(config.HOST_ID, "{:.8f}".format(utils.to_bitcoin(coinbase_functions.get_balance())))
+    try:
+        bot.send_message(config.HOST_ID, "{:.8f}".format(utils.to_bitcoin(coinbase_functions.get_balance())))
+    except telebot.apihelper.ApiException:
+        pass
+
+
+@bot.message_handler(commands=['reward'])
+def reward_command(message):
+    if message.chat.id != config.HOST_ID:
+        return
+
+    args = message.text.split()
+    if len(args) != 2:
+        try:
+            bot.send_message(message.chat.id, "Wrong command")
+        except telebot.apihelper.ApiException:
+            pass
+    else:
+        users_db = Users_db(config.DB_NAME)
+        amount = float(args[1])
+        users = users_db.select_stats_users_id()
+        for user in users:
+            user_id = user[0]
+            make_reward(user_id, amount, users_db)
+        try:
+            bot.send_message(message.chat.id, "Rewarded users")
+        except telebot.apihelper.ApiException:
+            pass
+        users_db.close()
+
+
+@bot.message_handler(commands=['rewardone'])
+def reward_one(message):
+    if message.chat.id not in config.TRUSTED_IDs:
+        return
+
+    args = message.text.split()
+    if len(args) != 3:
+        try:
+            bot.send_message(message.chat.id, "Wrong command")
+        except telebot.apihelper.ApiException:
+            pass
+    else:
+        users_db = Users_db(config.DB_NAME)
+        user_id = args[1]
+        amount = float(args[2])
+        make_reward(user_id, amount, users_db, with_check=0)
+        try:
+            bot.send_message(message.chat.id, "Rewarded user")
+        except telebot.apihelper.ApiException:
+            pass
+        users_db.close()
+
+
+def make_reward(user_id, amount, users_db, with_check=1):
+    if with_check and users_db.select_reward(user_id) is not None:
+        return
+
+    is_eng = users_db.select_stats_field(user_id, 'is_eng')
+    utils.invested(users_db, user_id, amount, make_lift=0)
+    if with_check:
+        users_db.insert_reward(user_id)
+
+    text = "You were rewarded with amount *{} USD*" if is_eng else "Вы были вознаграждены суммой в *{} USD*"
+    text = text.format(amount)
+
+    try:
+        bot.send_message(user_id, text, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
+
+
+@bot.message_handler(commands=['notify'])
+def notify_all(message):
+    if message.chat.id != config.HOST_ID:
+        return
+
+    notify_message = message.text[message.text.find(" ") + 1:]
+
+    users_db = Users_db(config.DB_NAME)
+    users = users_db.select_stats_users_id()
+    for user in users:
+        user_id = user[0]
+        try:
+            bot.send_message(user_id, notify_message)
+        except telebot.apihelper.ApiException:
+            pass
+    try:
+        bot.send_message(config.HOST_ID, "Notified users")
+    except telebot.apihelper.ApiException:
+        pass
+
+
+@bot.message_handler(commands=['charge'])
+def overcharge_manual(message):
+    if message.chat.id != config.HOST_ID:
+        return
+
+    if message.text.split()[-1] == "ok":
+        overcharge_and_clean_repl()
+        try:
+            bot.send_message(config.HOST_ID, "Overcharged")
+        except telebot.apihelper.ApiException:
+            pass
+
+
+@bot.message_handler(commands=['calcincome'])
+def calcincome(message):
+    if message.chat.id != config.HOST_ID:
+        return
+
+    if message.text.split()[-1] == "ok":
+        users_db = Users_db(config.DB_NAME)
+        users = users_db.select_stats_users_id()
+        for user in users:
+            user_id = user[0]
+            utils.calc_income(users_db, user_id)
+        users_db.close()
+    try:
+        bot.send_message(config.HOST_ID, "ReCalced")
+    except telebot.apihelper.ApiException:
+        pass
+
+
+@bot.message_handler(commands=['get_table'])
+def get_table(message):
+    if message.chat.id not in config.TRUSTED_IDs:
+        return
+
+    args = message.text.split()
+    if len(args) != 2:
+        try:
+            bot.send_message(message.chat.id, "Wrong command")
+        except telebot.apihelper.ApiException:
+            pass
+    else:
+        table = args[1]
+        users_db = Users_db(config.DB_NAME)
+        tables_commands = {
+            'Addresses': users_db.select_addr_all,
+            'Ref_program': users_db.select_ref_all_all,
+            'Replenishments': users_db.select_repl_all,
+            'Requisites': users_db.select_requisites_all,
+            'Rewards': users_db.select_reward_all,
+            'Salts': users_db.select_salts_all,
+            'Statistics': users_db.select_stats_all
+        }
+
+        if table not in tables_commands:
+            try:
+                bot.send_message(message.chat.id, "Wrong table")
+            except telebot.apihelper.ApiException:
+                pass
+            return
+
+        data = tables_commands[table]()
+        users_db.close()
+
+        text = ""
+        for ind, element in enumerate(data):
+            text += "#" + str(ind + 1) + ". "
+            text += " ".join(map(str, element))
+            text += '\n'
+
+            if len(text) > 4000:
+                try:
+                    bot.send_message(message.chat.id, text)
+                except telebot.apihelper.ApiException:
+                    pass
+                text = ""
+
+        try:
+            bot.send_message(message.chat.id, text)
+        except telebot.apihelper.ApiException:
+            pass
 # </editor-fold>
 
 
@@ -238,16 +460,28 @@ def balance_command(message):
 @bot.message_handler(func=lambda message: message.text == "🇺🇸 English" or message.text == "🇷🇺 Русский")
 def handle_language(message):
     chat = message.chat
-    is_eng = message.text == '🇺🇸 English'
-    if is_eng:
-        text = "You chose english language"
-    else:
-        text = "Вы выбрали русский язык"
-    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng))
-
     users_db = Users_db(config.DB_NAME)
-    users_db.update_stats_field(chat.id, 'is_eng', int(is_eng))
+    is_eng = message.text == '🇺🇸 English'
+
+    if users_db.select_spam_cnt(chat.id)[0] > MAX_REQUESTS_PER_TIME:
+        if is_eng:
+            text = "You are sending messages too quickly. You can change language after {} minutes"
+        else:
+            text = "Вы посылаете сообщения слишком быстро. Вы сможете изменить язык после {} минут"
+        text = text.format(NULLIFY_AFTER)
+    else:
+        users_db.update_spam_cnt(chat.id)
+        if is_eng:
+            text = "You chose english language"
+        else:
+            text = "Вы выбрали русский язык"
+        users_db.update_stats_field(chat.id, 'is_eng', int(is_eng))
     users_db.close()
+
+    try:
+        bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng))
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=lambda message: message.text == "📈 Statistics" or message.text == "📈 Статистика")
@@ -256,16 +490,22 @@ def handle_statistics(message):
     users_db = Users_db(config.DB_NAME)
     user_stats = users_db.select_stats(chat.id)
     users_db.close()
-    if user_stats[7]:
+
+    is_eng = user_stats[7]
+    if is_eng:
         text = "Your balance: *{:.2f} USD*\nYour balance: *{:.8f} BTC*\n\nSum of your investments: *{:.2f} USD*\nSum " \
                "of your investments: *{:.8f} BTC*\n\nIncome from the project: *{:.2f} USD*\nIncome from the project: " \
                "*{:.8f} BTC* "
     else:
         text = "Ваш баланс: *{:.2f} USD*\nВаш баланс: *{:.8f} BTC*\n\nСумма ваших инвестиций: *{:.2f} USD*\nСумма " \
                "ваших инвестиций: *{:.8f} BTC*\n\nДоход от проекта: *{:.2f} USD*\nДоход от проекта: *{:.8f} BTC* "
-    bot.send_message(chat.id, text.format(user_stats[1], utils.to_bitcoin(user_stats[2]), user_stats[3],
-                    utils.to_bitcoin(user_stats[4]), user_stats[5], utils.to_bitcoin(user_stats[6])),
-                    reply_markup=utils.get_keyboard("balance_keyboard", user_stats[7]), parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text.format(user_stats[1], utils.to_bitcoin(user_stats[2]), user_stats[3],
+                                              utils.to_bitcoin(user_stats[4]), user_stats[5],
+                                              utils.to_bitcoin(user_stats[6])),
+                         reply_markup=utils.get_keyboard("balance_keyboard", user_stats[7]), parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(
@@ -288,29 +528,37 @@ def handle_ref_program(message):
                "USD*\nПрибыль со 2-ой линии: *{:.8f} BTC*\n\nПрибыль с 3-ей линии: *{:.2f} USD*\nПрибыль с " \
                "3-ей линии: *{:.8f} BTC*\n\nВаш id в Telegram: *{}*"
     ref_program_info = tuple(map(lambda line: 0 if line is None else line, ref_program_info))
-    bot.send_message(chat.id, text.format(ref_program_info[2] + ref_program_info[4] + ref_program_info[6],
-        utils.to_bitcoin(ref_program_info[3] + ref_program_info[5] + ref_program_info[7]), ref_program_info[8],
-        ref_program_info[9], ref_program_info[10], ref_program_info[2], utils.to_bitcoin(ref_program_info[3]),
-        ref_program_info[4], utils.to_bitcoin(ref_program_info[5]), ref_program_info[6],
-        utils.to_bitcoin(ref_program_info[7]), chat.id),
-        reply_markup=utils.get_keyboard("ref_program_keyboard", is_eng), parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text.format(ref_program_info[2] + ref_program_info[4] + ref_program_info[6],
+                                              utils.to_bitcoin(
+                                                  ref_program_info[3] + ref_program_info[5] + ref_program_info[7]),
+                                              ref_program_info[8],
+                                              ref_program_info[9], ref_program_info[10], ref_program_info[2],
+                                              utils.to_bitcoin(ref_program_info[3]),
+                                              ref_program_info[4], utils.to_bitcoin(ref_program_info[5]),
+                                              ref_program_info[6],
+                                              utils.to_bitcoin(ref_program_info[7]), chat.id),
+                         reply_markup=utils.get_keyboard("ref_program_keyboard", is_eng), parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=lambda message: message.text == "📲 About the service" or message.text == "📲 О сервисе")
-def handle_statistics(message):
+def handle_about(message):
     chat = message.chat
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
-    if is_eng:
-        text = "Sample text"
-    else:
-        text = "Сампл текст"
-    bot.send_message(chat.id, text)
+
+    text = config.ABOUT_TEXT[is_eng]
+    try:
+        bot.send_message(chat.id, text)
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=lambda message: message.text == "⚙ Settings" or message.text == "⚙ Настройки")
-def handle_statistics(message):
+def handle_settings(message):
     chat = message.chat
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
@@ -319,7 +567,10 @@ def handle_statistics(message):
         text = "What you want to change?"
     else:
         text = "Что вы хотите изменить?"
-    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("settings_keyboard", is_eng))
+    try:
+        bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("settings_keyboard", is_eng))
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -345,13 +596,19 @@ def handle_invitation_link(call):
         salt = salt[0]
     users_db.close()
     invitation_link = "https://t.me/{}?start={}".format(config.BOT_USERNAME, salt)
-    bot.send_message(chat.id, text.format(invitation_link))
+    try:
+        bot.send_message(chat.id, text.format(invitation_link))
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "💬 Language")
 def handle_change_language(call):
     chat = call.message.chat
-    bot.send_message(chat.id, "Choose language:", reply_markup=utils.get_keyboard("lang_keyboard"))
+    try:
+        bot.send_message(chat.id, "Choose language:", reply_markup=utils.get_keyboard("lang_keyboard"))
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "💳 Payment requisites")
@@ -369,8 +626,11 @@ def handle_change_requisites(call):
         requisites = tuple(map(lambda requisite: "Отсутствует" if requisite is None else requisite, requisites))
         text = "*Ваши реквизиты:*"
 
-    bot.send_message(chat.id, text, reply_markup=utils.requisites_keyboard("requisites_keyboard", requisites[1:]),
-                     parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=utils.requisites_keyboard("requisites_keyboard", requisites[1:]),
+                         parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "💳 Requisites examples")
@@ -378,7 +638,10 @@ def handle_requisites(call):
     chat = call.message.chat
     text = "*AdvCash:* advcash@gmail.com\n*Payeer:* P1000000\n*Bitcoin:* 13C3fxYMZzbt9HsTvCni779gqXyPadGtTQ\n*Qiwi:* " \
            "+7953155XXXX\n*Yandex Money:* 410011499718000 "
-    bot.send_message(chat.id, text, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "🔄 Reinvest")
@@ -391,17 +654,20 @@ def handle_change_reinvest(call):
 
     if balance > 0:
         users_db.update_stats_nullify_balance(chat.id)
-        utils.invested(users_db, chat.id, balance)
+        utils.invested(users_db, chat.id, balance, make_lift=0)
     if balance_btc > 0:
         users_db.update_stats_nullify_balance_btc(chat.id)
-        utils.invested(users_db, chat.id, balance_btc, 1)
+        utils.invested(users_db, chat.id, balance_btc, is_btc=1, make_lift=0)
     if is_eng:
         text = "Successfully reinvested"
     else:
         text = "Реинвестирование прошло успешно"
     users_db.close()
 
-    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -418,7 +684,10 @@ def handle_change_inviter(call):
             text = "You already have inviter: *{}*"
         else:
             text = "У вас уже есть пригласитель: *{}*"
-        bot.send_message(chat.id, text.format(inviter), parse_mode="Markdown")
+        try:
+            bot.send_message(chat.id, text.format(inviter), parse_mode="Markdown")
+        except telebot.apihelper.ApiException:
+            pass
         return
     users_db.close()
 
@@ -427,7 +696,10 @@ def handle_change_inviter(call):
     else:
         text = "👤 Выберете пригласителя. Введите его id:"
     force_reply = telebot.types.ForceReply(selective=False)
-    bot.send_message(chat.id, text, reply_markup=force_reply)
+    try:
+        bot.send_message(chat.id, text, reply_markup=force_reply)
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=
@@ -454,7 +726,10 @@ def handle_reply_inviter(message):
             text = "Введен неправильный id"
     users_db.close()
 
-    bot.send_message(chat.id, text)
+    try:
+        bot.send_message(chat.id, text)
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -472,7 +747,10 @@ def handle_requisites(call):
         text = "💳 {} выбран. Укажите ваш реквизит:"
 
     force_reply = telebot.types.ForceReply(selective=False)
-    bot.send_message(chat.id, text.format(call.data), reply_markup=force_reply)
+    try:
+        bot.send_message(chat.id, text.format(call.data), reply_markup=force_reply)
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=
@@ -497,8 +775,11 @@ def handle_reply_requisite(message):
             text = "Реквизит сохранен: *{}*"
     users_db.close()
 
-    bot.send_message(chat.id, text.format(requisite), reply_markup=utils.get_keyboard("main_keyboard", is_eng),
-                     parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text.format(requisite), reply_markup=utils.get_keyboard("main_keyboard", is_eng),
+                         parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -514,7 +795,10 @@ def handle_refill(call):
     else:
         text = "Выберете валюту:"
 
-    bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("currency_keyboard"))
+    try:
+        bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("currency_keyboard"))
+    except telebot.apihelper.ApiException:
+        pass
 
 
 # <editor-fold desc="USD">
@@ -530,41 +814,58 @@ def handle_refill_usd(call):
         text = "🔢 Введите желаемую сумму:\n*Минимальная сумма: {} USD*"
 
     force_reply = telebot.types.ForceReply(selective=False)
-    bot.send_message(chat.id, text.format(config.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text.format(config.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=
                      lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "🔢")
 def handle_refill_usd_entered(message):
     chat = message.chat
-    try:
-        amount = round(float(message.text.strip()), 2)
-    except ValueError:
-        amount = -1
-
     users_db = Users_db(config.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
-    if amount >= config.MIN_REFILL_USD:
-        text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
-        btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
+    keyboard = None
 
-        order_id = utils.gen_salt()
-        users_db.insert_repl_order(order_id, amount, chat.id)
-        users_db.close()
-
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        keyboard.add(telebot.types.InlineKeyboardButton(text=btn_text, url="https://{}/payment/{}".format(
-            config.WEBHOOK_DOMAIN, order_id)))
-    else:
-        users_db.close()
-        if amount == -1:
-            text = "🔢 Invalid amount provided" if is_eng else "🔢 Введена неправильная сумма"
+    if users_db.select_spam_cnt(chat.id, False)[0] > MAX_REQUESTS_PER_TIME:
+        if is_eng:
+            text = "You are sending messages too quickly. You can create order after {} minutes"
         else:
-            text = "🔢 Amount should be greater than *{} USD*" if is_eng else "🔢 Сумма должна быть больше *{} USD*"
-            text = text.format(config.MIN_REFILL_USD)
-        keyboard = telebot.types.ForceReply(selective=False)
+            text = "Вы посылаете сообщения слишком быстро. Вы сможете создать заказ после {} минут"
+        text = text.format(NULLIFY_AFTER)
+    else:
+        users_db.update_spam_cnt(chat.id, False)
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+        try:
+            amount = round(float(message.text.strip()), 2)
+        except ValueError:
+            amount = -1
+
+        if amount >= config.MIN_REFILL_USD:
+            text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
+            btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
+
+            order_id = utils.gen_salt()
+            users_db.insert_repl_order(order_id, amount, chat.id)
+            users_db.close()
+
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            keyboard.add(telebot.types.InlineKeyboardButton(text=btn_text, url="https://{}/payment/{}".format(
+                config.WEBHOOK_DOMAIN, order_id)))
+        else:
+            users_db.close()
+            if amount == -1:
+                text = "🔢 Invalid amount provided" if is_eng else "🔢 Введена неправильная сумма"
+            else:
+                text = "🔢 Amount should be greater than *{} USD*" if is_eng else "🔢 Сумма должна быть больше *{} USD*"
+                text = text.format(config.MIN_REFILL_USD)
+            keyboard = telebot.types.ForceReply(selective=False)
+
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -589,7 +890,10 @@ def handle_refill_btc(call):
                "в ваш депозит.\nОтправляйте только одну транзакцию на этот адрес:\n`{}`\nОбратите внимание, что" \
                " переводы BTC осуществляются не моментально."
 
-    bot.send_message(chat.id, text.format(utils.to_bitcoin(config.MIN_REFILL_BTC), address), parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text.format(utils.to_bitcoin(config.MIN_REFILL_BTC), address), parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 # </editor-fold>
 
@@ -618,7 +922,10 @@ def handle_withdraw(call):
             text = "Выберете валюту:"
         keyboard = utils.get_keyboard("withdraw_currency")
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ("💸 USD", "💸 BTC"))
@@ -660,7 +967,10 @@ def handle_withdraw_currency(call):
             text = "Choose payment system:" if is_eng else "Выберете платежную систему:"
             keyboard = utils.get_keyboard("pay_sys_keyboard")
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 # <editor-fold desc="USD">
@@ -688,7 +998,10 @@ def handle_pay_sys(call):
         else:
             text = "Реквизит не указан. Вы можете изменить это в настройках"
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 
 
 @bot.message_handler(func=
@@ -723,7 +1036,7 @@ def handle_withdraw_pay_sys_entered(message):
             errors = payeer_functions.payout_possibility(pay_sys, requisite, amount, is_eng)
             if errors == "":
                 errors = payeer_functions.payout(pay_sys, requisite, amount, is_eng)
-            if errors == "":
+            if errors == "Withdraw completed successfully!" or errors == "Вывод завершен успешно!":
                 users_db.update_stats_dec_balance(chat.id, amount)
             text = errors
         users_db.close()
@@ -738,7 +1051,10 @@ def handle_withdraw_pay_sys_entered(message):
             text = text.format(config.MIN_WITHDRAW_USD)
         keyboard = telebot.types.ForceReply(selective=False)
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 
 
@@ -771,7 +1087,7 @@ def handle_withdraw_btc_entered(message):
         elif amount >= config.MIN_WITHDRAW_BTC:
             text = coinbase_functions.send_money(requisite, amount, is_eng)
             if (len(text) == 23 or len(text) == 23) and text[-1] == '!':
-                users_db.update_stats_dec_balance(chat.id, amount, 1)
+                users_db.update_stats_dec_balance(chat.id, amount, is_btc=1)
         else:
             if amount == -1:
                 text = "🅱 Invalid amount provided" if is_eng else "🅱 Введена неправильная сумма"
@@ -781,7 +1097,10 @@ def handle_withdraw_btc_entered(message):
                 text = text.format(utils.to_bitcoin(config.MIN_WITHDRAW_BTC))
             keyboard = telebot.types.ForceReply(selective=False)
 
-    bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    try:
+        bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
+    except telebot.apihelper.ApiException:
+        pass
 # </editor-fold>
 # </editor-fold>
 

@@ -143,29 +143,46 @@ def update_earn_on_line(users_db, user_id, cur_line, **kwargs):
 
 
 def update_earn_on_line_btc(users_db, user_id, cur_line, **kwargs):
-    line_value_btc = kwargs.get('line_value_btc') * (0.08 / (2 ** (cur_line - 1)))
+    line_value_btc = int(kwargs.get('line_value_btc') * (0.08 / (2 ** (cur_line - 1))))
     users_db.update_ref_line_btc(user_id, cur_line, line_value_btc)
     return line_value_btc
 # </editor-fold>
 
 
 # <editor-fold desc="Invest handler">
-def invested(users_db, user_id, amount, is_btc=0):
+def invested(users_db, user_id, amount, is_btc=0, make_lift=1):
     if is_btc:
-        percent_btc = calc_percent_btc(amount)
-        users_db.update_stats_invested_btc(user_id, amount, amount * percent_btc)
-        lift_on_lines(users_db, user_id, update_earn_on_line_btc, line_value_btc=amount)
+        invested_btc_money = users_db.select_stats_field(user_id, 'invested_btc')
+        invested_btc_money += amount
+        percent_btc = calc_percent_btc(invested_btc_money)
+        users_db.update_stats_invested_btc(user_id, invested_btc_money, int(invested_btc_money * percent_btc))
+        if make_lift:
+            lift_on_lines(users_db, user_id, update_earn_on_line_btc, line_value_btc=amount)
     else:
-        percent = calc_percent(amount)
-        users_db.update_stats_invested(user_id, amount, amount * percent)
-        lift_on_lines(users_db, user_id, update_earn_on_line, line_value=amount)
+        invested_money = users_db.select_stats_field(user_id, 'invested')
+        invested_money += amount
+        percent = calc_percent(invested_money)
+        users_db.update_stats_invested(user_id, invested_money, invested_money * percent)
+        if make_lift:
+            lift_on_lines(users_db, user_id, update_earn_on_line, line_value=amount)
+
+
+def calc_income(users_db, user_id, is_btc=0):
+    if is_btc:
+        invested_btc_money = users_db.select_stats_field(user_id, 'invested_btc')
+        percent_btc = calc_percent_btc(invested_btc_money)
+        users_db.update_stats_invested_btc(user_id, invested_btc_money, int(invested_btc_money * percent_btc))
+    else:
+        invested_money = users_db.select_stats_field(user_id, 'invested')
+        percent = calc_percent(invested_money)
+        users_db.update_stats_invested(user_id, invested_money, invested_money * percent)
 # </editor-fold>
 
 
 # <editor-fold desc="Common functions">
 def calc_percent(value):
     percent = 0
-    if 0 < value <= 50:
+    if config.MIN_REFILL_USD <= value <= 50:
         percent = 0.0111
     elif 51 <= value <= 100:
         percent = 0.0222
@@ -179,18 +196,7 @@ def calc_percent(value):
 
 
 def calc_percent_btc(value):
-    percent = 0
-    if 0 < value <= 50:
-        percent = 0.0111
-    elif 51 <= value <= 100:
-        percent = 0.0222
-    elif 101 <= value <= 500:
-        percent = 0.0333
-    elif 501 <= value <= 1000:
-        percent = 0.0444
-    elif value > 1000:
-        percent = 0.0555
-    return percent
+    return 0.0333
 
 
 def gen_salt():
@@ -207,8 +213,10 @@ def to_bitcoin(value):
 
 def to_satoshi(value):
     return int(value * 100000000)
+# </editor-fold>
 
 
+# <editor-fold desc="Schedule">
 def init_schedule(schedule):
     global schedule_thread
     schedule_thread = schedule
@@ -259,4 +267,4 @@ def check_payment(ip_address, post_data):
 
 
 if __name__ == '__main__':
-    print(calc_percent(1.0))
+    pass

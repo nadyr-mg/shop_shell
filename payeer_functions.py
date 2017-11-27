@@ -1,8 +1,9 @@
-from config import PAYEER_ACCOUNT, PAYEER_API_KEY, PAYEER_API_ID, BALANCE_USED_PART
+import config
+from utils import get_desc_sign
 
 import json
 from urllib.request import urlopen, Request
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qs
 
 payment_systems = {
     'AdvCash': '87893285',
@@ -11,20 +12,18 @@ payment_systems = {
     'Yandex': '57378077'
 }
 
-values_for_balance = {
-    'account': PAYEER_ACCOUNT,
-    'apiId': PAYEER_API_ID,
-    'apiPass': PAYEER_API_KEY,
-    'action': 'balance'
+base_values = {
+    'account': config.PAYEER_ACCOUNT,
+    'apiId': config.PAYEER_API_ID,
+    'apiPass': config.PAYEER_API_KEY,
 }
 
-global_values = {
-    'account': PAYEER_ACCOUNT,
-    'apiId': PAYEER_API_ID,
-    'apiPass': PAYEER_API_KEY,
-    'curIn': 'USD',
-    'curOut': 'USD'
-}
+values_for_balance = dict(base_values)
+values_for_balance['action'] = 'balance'
+
+global_values = dict(base_values)
+global_values['curIn'] = 'USD'
+global_values['curOut'] = 'USD'
 
 api_url = "https://payeer.com/ajax/api/api.php?{}"
 
@@ -49,10 +48,11 @@ def init_values(pay_sys, requisite, amount):
 def get_balance():
     request = Request(api_url.format('balance'), data=urlencode(values_for_balance).encode(), headers=headers)
 
-    response = json.loads(urlopen(request).read())
-    return round(float(response['balance']['USD']['BUDGET']) * BALANCE_USED_PART, 2)
+    response = json.loads(urlopen(request).read().decode())
+    return round(float(response['balance']['USD']['BUDGET']) * config.BALANCE_USED_PART, 2)
 
 
+# <editor-fold desc="Payout possibility">
 def payout_possibility(pay_sys, requisite, amount, is_eng):
     balance = get_balance()
     if amount > balance:
@@ -67,7 +67,7 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
 
     request = Request(api_url.format('initOutput'), data=urlencode(local_values).encode(), headers=headers)
 
-    response = json.loads(urlopen(request).read())
+    response = json.loads(urlopen(request).read().decode())
     errors = ""
     if (not isinstance(response['errors'], list) and response['errors'] is not None) \
             or (isinstance(response['errors'], list) and response['errors']):
@@ -109,14 +109,18 @@ def payout_possibility(pay_sys, requisite, amount, is_eng):
     return errors
 
 
+# </editor-fold>
+
+
+# <editor-fold desc="Payout">
 def payout(pay_sys, requisite, amount, is_eng):
     local_values = init_values(pay_sys, requisite, amount)
     local_values['action'] = 'output'
 
     request = Request(api_url.format('output'), data=urlencode(local_values).encode(), headers=headers)
 
-    response = json.loads(urlopen(request).read())
-    if (not isinstance(response['errors'], list) and response['errors'] is not None) \
+    response = json.loads(urlopen(request).read().decode())
+    if (not isinstance(response['errors'], list) and response['errors'] is not None and response['errors']) \
             or (isinstance(response['errors'], list) and response['errors']):
         if is_eng:
             result = "Something went wrong. Check validity of your requisites or try again later"
@@ -127,5 +131,52 @@ def payout(pay_sys, requisite, amount, is_eng):
     return result
 
 
+# </editor-fold>
+
+
+def create_merchant(order_id, order_email, amount):
+    local_values = dict(base_values)
+    local_values['action'] = 'merchant'
+    desc, sign = get_desc_sign(order_id, amount)
+    local_values['shop'] = {
+        'm_shop': config.PAYEER_MERCHANT_ID,
+        'm_orderid': order_id,
+        'm_amount': amount,
+        'm_curr': config.PAYEER_CURRENCY,
+        'm_desc': desc,
+        'm_sign': sign
+    }
+    local_values['shop'] = json.dumps(local_values['shop'])
+    local_values['ps'] = {
+        'id': '20916096',
+        'curr': config.PAYEER_CURRENCY
+    }
+    local_values['ps'] = json.dumps(local_values['ps'])
+    local_values['form'] = {
+        'order_email': order_email
+    }
+    local_values['form'] = json.dumps(local_values['form'])
+    local_values['status_url'] = config.PAYEER_STATUS_URL
+
+    local_values = urlencode(local_values).encode()
+    l = parse_qs(local_values)
+    request = Request(api_url.format('merchant'), data=local_values, headers=headers)
+
+    response = json.loads(urlopen(request).read().decode())
+
+    return response
+
+
 if __name__ == '__main__':
-    print(get_balance())
+    print(create_merchant('fsd4bdrg', 'lester0578@gmail.com', 100.00))
+    # import binascii
+    # from hashlib import sha256
+    #
+    # amount = "1.00"
+    # order_id = "12345"
+    # desc = "Test"
+    # desc = binascii.b2a_base64(desc.encode('utf8'))[:-1].decode()
+    # string_to_hash = ":".join(map(str, ["12345", order_id, amount, config.PAYEER_CURRENCY, desc,
+    #                                     'Секретный ключ']))
+    # hash = sha256(string_to_hash.encode()).hexdigest().upper()
+    print()
