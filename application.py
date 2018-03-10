@@ -40,7 +40,7 @@ def handle_request():
 
 @application.route('/')
 def handle_index():
-    return render_template('index.html')
+    return render_template('index_page.html')
 # </editor-fold>
 
 
