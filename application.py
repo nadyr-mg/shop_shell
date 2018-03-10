@@ -9,7 +9,7 @@ import schedule
 
 import utils
 from Data_base.user_db_class import Users_db
-import config
+import project_variables
 import payeer_functions
 import coinbase_functions
 
@@ -19,20 +19,20 @@ MAX_REQUESTS_PER_TIME = 6
 NULLIFY_AFTER = 10
 REWARD_AMOUNT = 5
 
-bot = telebot.TeleBot(config.TOKEN)
+bot = telebot.TeleBot(project_variables.TOKEN)
 application = Flask(__name__)
 bot.remove_webhook()
 sleep(1)
 if not DEBUG:
-    bot.set_webhook(url="https://{}/{}".format(config.WEBHOOK_DOMAIN, config.TOKEN))
+    bot.set_webhook(url="https://{}/{}".format(project_variables.WEBHOOK_DOMAIN, project_variables.TOKEN))
 else:
-    bot.set_webhook(url="https://{}:{}/{}".format(config.SERVER_IP, config.WEBHOOK_PORT, config.TOKEN),
+    bot.set_webhook(url="https://{}:{}/{}".format(project_variables.SERVER_IP, project_variables.WEBHOOK_PORT, project_variables.TOKEN),
                     certificate=open('./SSL_certs/webhook_cert.pem', 'rb'))
 
 
 # <editor-fold desc="Server's handlers">
 # <editor-fold desc="Main handlers">
-@application.route('/{}'.format(config.TOKEN), methods=['POST'])
+@application.route('/{}'.format(project_variables.TOKEN), methods=['POST'])
 def handle_request():
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return '', 200
@@ -62,7 +62,7 @@ def handle_status():
     if result == -1:
         responce = "Wrong data"
     else:
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         if result == 0:
             responce = post_data['m_orderid'][0] + '|error'
         else:
@@ -86,7 +86,7 @@ def handle_status():
 
 @application.route('/payment/<order_id>')
 def handle_payment(order_id):
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     amount = users_db.select_repl_amount(order_id)
     users_db.close()
 
@@ -95,15 +95,15 @@ def handle_payment(order_id):
     else:
         amount = amount[0]
         desc, sign = utils.get_desc_sign(order_id, amount)
-        result = render_template('make_payment.html', m_shop=config.PAYEER_MERCHANT_ID, m_orderid=order_id,
-                                 m_amount=amount, m_curr=config.PAYEER_CURRENCY, m_desc=desc, m_sign=sign)
+        result = render_template('make_payment.html', m_shop=project_variables.PAYEER_MERCHANT_ID, m_orderid=order_id,
+                                 m_amount=amount, m_curr=project_variables.PAYEER_CURRENCY, m_desc=desc, m_sign=sign)
 
     return result
 
 
 @application.route('/payeer_428636358.txt')
 def handle_payeer_confirm():
-    return config.PAYEER_CONFIRM
+    return project_variables.PAYEER_CONFIRM
 # </editor-fold>
 
 
@@ -116,11 +116,11 @@ def handle_status_btc():
 
     body = loads(body)
     amount = utils.to_satoshi(float(body["additional_data"]["amount"]["amount"]))
-    if amount < config.MIN_REFILL_BTC:
+    if amount < project_variables.MIN_REFILL_BTC:
         return "", 200
 
     address = body["data"]["address"]
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     user_id = users_db.select_addr_user(address)
     if user_id is None:
         return "", 500
@@ -146,7 +146,7 @@ def handle_status_btc():
 
 # <editor-fold desc="Schedule events">
 def overcharge_and_clean_repl():
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
 
     repls = users_db.select_repl_orders()
     for repl in repls:
@@ -178,7 +178,7 @@ def overcharge_and_clean_repl():
 
 
 def nullify_spam_cnt():
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     users_db.nullify_spam()
     users_db.close()
 # </editor-fold>
@@ -194,7 +194,7 @@ def start_command(message):
                              reply_markup=utils.get_keyboard("lang_keyboard"))
         except telebot.apihelper.ApiException:
             pass
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         # Handle inserting user's statistics and ref_program info
         if not users_db.is_exist_stats(chat.id):
             users_db.insert_stats((chat.id, 0.0, 0, 0.0, 0, 0.0, 0, 1))
@@ -235,7 +235,7 @@ def start_command(message):
 @bot.message_handler(commands=['menu'])
 def menu_command(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     try:
@@ -246,7 +246,7 @@ def menu_command(message):
 
 @bot.message_handler(commands=['schedule'])
 def schedule_command(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     command = message.text.split()
@@ -268,25 +268,25 @@ def schedule_command(message):
     else:
         text = "Wrong command"
     try:
-        bot.send_message(config.HOST_ID, text)
+        bot.send_message(project_variables.HOST_ID, text)
     except telebot.apihelper.ApiException:
         pass
 
 
 @bot.message_handler(commands=['balance'])
 def balance_command(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     try:
-        bot.send_message(config.HOST_ID, "{:.8f}".format(utils.to_bitcoin(coinbase_functions.get_balance())))
+        bot.send_message(project_variables.HOST_ID, "{:.8f}".format(utils.to_bitcoin(coinbase_functions.get_balance())))
     except telebot.apihelper.ApiException:
         pass
 
 
 @bot.message_handler(commands=['reward'])
 def reward_command(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     args = message.text.split()
@@ -296,7 +296,7 @@ def reward_command(message):
         except telebot.apihelper.ApiException:
             pass
     else:
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         amount = float(args[1])
         users = users_db.select_stats_users_id()
         for user in users:
@@ -311,7 +311,7 @@ def reward_command(message):
 
 @bot.message_handler(commands=['rewardone'])
 def reward_one(message):
-    if message.chat.id not in config.TRUSTED_IDs:
+    if message.chat.id not in project_variables.TRUSTED_IDs:
         return
 
     args = message.text.split()
@@ -321,7 +321,7 @@ def reward_one(message):
         except telebot.apihelper.ApiException:
             pass
     else:
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         user_id = args[1]
         amount = float(args[2])
         make_reward(user_id, amount, users_db, with_check=0)
@@ -352,12 +352,12 @@ def make_reward(user_id, amount, users_db, with_check=1):
 
 @bot.message_handler(commands=['notify'])
 def notify_all(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     notify_message = message.text[message.text.find(" ") + 1:]
 
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     users = users_db.select_stats_users_id()
     for user in users:
         user_id = user[0]
@@ -366,45 +366,45 @@ def notify_all(message):
         except telebot.apihelper.ApiException:
             pass
     try:
-        bot.send_message(config.HOST_ID, "Notified users")
+        bot.send_message(project_variables.HOST_ID, "Notified users")
     except telebot.apihelper.ApiException:
         pass
 
 
 @bot.message_handler(commands=['charge'])
 def overcharge_manual(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     if message.text.split()[-1] == "ok":
         overcharge_and_clean_repl()
         try:
-            bot.send_message(config.HOST_ID, "Overcharged")
+            bot.send_message(project_variables.HOST_ID, "Overcharged")
         except telebot.apihelper.ApiException:
             pass
 
 
 @bot.message_handler(commands=['calcincome'])
 def calcincome(message):
-    if message.chat.id != config.HOST_ID:
+    if message.chat.id != project_variables.HOST_ID:
         return
 
     if message.text.split()[-1] == "ok":
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         users = users_db.select_stats_users_id()
         for user in users:
             user_id = user[0]
             utils.calc_income(users_db, user_id)
         users_db.close()
     try:
-        bot.send_message(config.HOST_ID, "ReCalced")
+        bot.send_message(project_variables.HOST_ID, "ReCalced")
     except telebot.apihelper.ApiException:
         pass
 
 
 @bot.message_handler(commands=['get_table'])
 def get_table(message):
-    if message.chat.id not in config.TRUSTED_IDs:
+    if message.chat.id not in project_variables.TRUSTED_IDs:
         return
 
     args = message.text.split()
@@ -415,7 +415,7 @@ def get_table(message):
             pass
     else:
         table = args[1]
-        users_db = Users_db(config.DB_NAME)
+        users_db = Users_db(project_variables.DB_NAME)
         tables_commands = {
             'Addresses': users_db.select_addr_all,
             'Ref_program': users_db.select_ref_all_all,
@@ -460,7 +460,7 @@ def get_table(message):
 @bot.message_handler(func=lambda message: message.text == "🇺🇸 English" or message.text == "🇷🇺 Русский")
 def handle_language(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = message.text == '🇺🇸 English'
 
     if users_db.select_spam_cnt(chat.id)[0] > MAX_REQUESTS_PER_TIME:
@@ -487,7 +487,7 @@ def handle_language(message):
 @bot.message_handler(func=lambda message: message.text == "📈 Statistics" or message.text == "📈 Статистика")
 def handle_statistics(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     user_stats = users_db.select_stats(chat.id)
     users_db.close()
 
@@ -512,7 +512,7 @@ def handle_statistics(message):
     func=lambda message: message.text == "👥 Referral program" or message.text == "👥 Реферальная программа")
 def handle_ref_program(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     ref_program_info = users_db.select_ref_all(chat.id)
     users_db.close()
@@ -546,11 +546,11 @@ def handle_ref_program(message):
 @bot.message_handler(func=lambda message: message.text == "📲 About the service" or message.text == "📲 О сервисе")
 def handle_about(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
 
-    text = config.ABOUT_TEXT[is_eng]
+    text = project_variables.ABOUT_TEXT[is_eng]
     try:
         bot.send_message(chat.id, text)
     except telebot.apihelper.ApiException:
@@ -560,7 +560,7 @@ def handle_about(message):
 @bot.message_handler(func=lambda message: message.text == "⚙ Settings" or message.text == "⚙ Настройки")
 def handle_settings(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -578,7 +578,7 @@ def handle_settings(message):
 @bot.callback_query_handler(func=lambda call: call.data == "🔗 Invitation link")
 def handle_invitation_link(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -586,7 +586,7 @@ def handle_invitation_link(call):
     else:
         text = "Ваша пригласительная ссылка:\n{}"
 
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     salt = users_db.select_salt(chat.id)
     if salt is None:
         if not users_db.insert_salt(randint(1, 1000000000), chat.id):
@@ -595,7 +595,7 @@ def handle_invitation_link(call):
     else:
         salt = salt[0]
     users_db.close()
-    invitation_link = "https://t.me/{}?start={}".format(config.BOT_USERNAME, salt)
+    invitation_link = "https://t.me/{}?start={}".format(project_variables.BOT_USERNAME, salt)
     try:
         bot.send_message(chat.id, text.format(invitation_link))
     except telebot.apihelper.ApiException:
@@ -614,7 +614,7 @@ def handle_change_language(call):
 @bot.callback_query_handler(func=lambda call: call.data == "💳 Payment requisites")
 def handle_change_requisites(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     requisites = users_db.select_requisites(chat.id)
     users_db.close()
@@ -647,7 +647,7 @@ def handle_requisites(call):
 @bot.callback_query_handler(func=lambda call: call.data == "🔄 Reinvest")
 def handle_change_reinvest(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
     balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
@@ -675,7 +675,7 @@ def handle_change_reinvest(call):
 @bot.callback_query_handler(func=lambda call: call.data == "👤 Set an inviter")
 def handle_change_inviter(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
 
     inviter = users_db.select_ref_inviter(chat.id)
@@ -707,7 +707,7 @@ def handle_change_inviter(call):
                                                                                   0] == "👤")
 def handle_reply_inviter(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     if len(message.text) < 20 and message.text.isnumeric():
         inviter_id = int(message.text)
@@ -738,7 +738,7 @@ def handle_reply_inviter(message):
     func=lambda call: call.data in ("AdvCash", "Payeer", "Bitcoin", "Qiwi", "Yandex Money"))
 def handle_requisites(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -760,7 +760,7 @@ def handle_reply_requisite(message):
     pay_method = message.reply_to_message.text.split()[1]
     requisite = ''.join(message.text.split())
 
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     if not utils.check_requisite(pay_method, requisite):
         if is_eng:
@@ -787,7 +787,7 @@ def handle_reply_requisite(message):
 @bot.callback_query_handler(func=lambda call: call.data == "💵 Refill")
 def handle_refill(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -805,7 +805,7 @@ def handle_refill(call):
 @bot.callback_query_handler(func=lambda call: call.data == "USD")
 def handle_refill_usd(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     users_db.close()
     if is_eng:
@@ -815,7 +815,7 @@ def handle_refill_usd(call):
 
     force_reply = telebot.types.ForceReply(selective=False)
     try:
-        bot.send_message(chat.id, text.format(config.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
+        bot.send_message(chat.id, text.format(project_variables.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
 
@@ -824,7 +824,7 @@ def handle_refill_usd(call):
                      lambda message: message.reply_to_message is not None and message.reply_to_message.text[0] == "🔢")
 def handle_refill_usd_entered(message):
     chat = message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     keyboard = None
 
@@ -842,7 +842,7 @@ def handle_refill_usd_entered(message):
         except ValueError:
             amount = -1
 
-        if amount >= config.MIN_REFILL_USD:
+        if amount >= project_variables.MIN_REFILL_USD:
             text = "Follow the link to make payment:" if is_eng else "Перейдите по ссылке для оплаты:"
             btn_text = "Link for payment:" if is_eng else "Ссылка на оплату:"
 
@@ -852,14 +852,14 @@ def handle_refill_usd_entered(message):
 
             keyboard = telebot.types.InlineKeyboardMarkup()
             keyboard.add(telebot.types.InlineKeyboardButton(text=btn_text, url="https://{}/payment/{}".format(
-                config.WEBHOOK_DOMAIN, order_id)))
+                project_variables.WEBHOOK_DOMAIN, order_id)))
         else:
             users_db.close()
             if amount == -1:
                 text = "🔢 Invalid amount provided" if is_eng else "🔢 Введена неправильная сумма"
             else:
                 text = "🔢 Amount should be greater than *{} USD*" if is_eng else "🔢 Сумма должна быть больше *{} USD*"
-                text = text.format(config.MIN_REFILL_USD)
+                text = text.format(project_variables.MIN_REFILL_USD)
             keyboard = telebot.types.ForceReply(selective=False)
 
     try:
@@ -873,7 +873,7 @@ def handle_refill_usd_entered(message):
 @bot.callback_query_handler(func=lambda call: call.data == "BTC")
 def handle_refill_btc(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     address = users_db.select_addr_address(chat.id)[0]
     if address is None:
         address = coinbase_functions.generate_address()
@@ -891,7 +891,7 @@ def handle_refill_btc(call):
                " переводы BTC осуществляются не моментально."
 
     try:
-        bot.send_message(chat.id, text.format(utils.to_bitcoin(config.MIN_REFILL_BTC), address), parse_mode="Markdown")
+        bot.send_message(chat.id, text.format(utils.to_bitcoin(project_variables.MIN_REFILL_BTC), address), parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
 # </editor-fold>
@@ -902,19 +902,19 @@ def handle_refill_btc(call):
 @bot.callback_query_handler(func=lambda call: call.data == "💸 Withdraw")
 def handle_withdraw(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
     balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
     users_db.close()
 
     keyboard = None
-    if balance < config.MIN_WITHDRAW_USD and balance_btc < config.MIN_WITHDRAW_BTC:
+    if balance < project_variables.MIN_WITHDRAW_USD and balance_btc < project_variables.MIN_WITHDRAW_BTC:
         if is_eng:
             text = "You don't have enough money to withdraw\nMinimum is *{} USD* or *{:.8f} BTC*"
         else:
             text = "У вас нехватает средств для вывода\nМинимальная сумма: *{} USD* or *{:.8f} BTC*"
-        text = text.format(config.MIN_WITHDRAW_USD, utils.to_bitcoin(config.MIN_WITHDRAW_BTC))
+        text = text.format(project_variables.MIN_WITHDRAW_USD, utils.to_bitcoin(project_variables.MIN_WITHDRAW_BTC))
     else:
         if is_eng:
             text = "Choose currency:"
@@ -931,19 +931,19 @@ def handle_withdraw(call):
 @bot.callback_query_handler(func=lambda call: call.data in ("💸 USD", "💸 BTC"))
 def handle_withdraw_currency(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
 
     keyboard = None
     if call.data == "💸 BTC":
         balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
         users_db.close()
-        if balance_btc < config.MIN_WITHDRAW_BTC:
+        if balance_btc < project_variables.MIN_WITHDRAW_BTC:
             if is_eng:
                 text = "You don't have enough money to withdraw\nMinimum is *{:.8f} BTC*"
             else:
                 text = "У вас нехватает средств для вывода\nМинимальная сумма: *{:.8f} BTC*"
-            text = text.format(utils.to_bitcoin(config.MIN_WITHDRAW_BTC))
+            text = text.format(utils.to_bitcoin(project_variables.MIN_WITHDRAW_BTC))
         else:
             if is_eng:
                 text = "🅱 Type in desired amount:\nMinimum is *{:.8f} BTC*\nCurrent bitcoin fee is *{:.8f} BTC*"
@@ -951,18 +951,18 @@ def handle_withdraw_currency(call):
                 text = "🅱 Укажите желаемую сумму\nМинимальная сумма: *{:.8f} BTC*\nТекущая коммисия, при отправке " \
                        "bitcoin: *{:.8f} BTC*"
             cur_fee = coinbase_functions.get_cur_fee()
-            text = text.format(utils.to_bitcoin(config.MIN_WITHDRAW_BTC), utils.to_bitcoin(cur_fee))
+            text = text.format(utils.to_bitcoin(project_variables.MIN_WITHDRAW_BTC), utils.to_bitcoin(cur_fee))
 
             keyboard = telebot.types.ForceReply(selective=False)
     else:
         balance = users_db.select_stats_field(chat.id, 'balance')
         users_db.close()
-        if balance < config.MIN_WITHDRAW_USD:
+        if balance < project_variables.MIN_WITHDRAW_USD:
             if is_eng:
                 text = "You don't have enough money to withdraw\nMinimum is *{} USD*"
             else:
                 text = "У вас нехватает средств для вывода\nМинимальная сумма: *{} USD*"
-            text = text.format(config.MIN_WITHDRAW_USD)
+            text = text.format(project_variables.MIN_WITHDRAW_USD)
         else:
             text = "Choose payment system:" if is_eng else "Выберете платежную систему:"
             keyboard = utils.get_keyboard("pay_sys_keyboard")
@@ -978,7 +978,7 @@ def handle_withdraw_currency(call):
     func=lambda call: call.data[0] == '💸' and call.data in ("💸 AdvCash", "💸 Payeer", "💸 Qiwi", "💸 Yandex Money"))
 def handle_pay_sys(call):
     chat = call.message.chat
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     pay_sys = 'yandex' if call.data[2] == 'Y' else call.data[2:].lower()
     requisite = users_db.select_requisite(chat.id, pay_sys)
@@ -990,7 +990,7 @@ def handle_pay_sys(call):
             text = "💲 {} chosen. Type in desired amount:\nMinimum is *{} USD*"
         else:
             text = "💲 {} выбран. Укажите желаемую сумму\nМинимальная сумма: *{} USD*"
-        text = text.format(call.data[2:], config.MIN_WITHDRAW_USD)
+        text = text.format(call.data[2:], project_variables.MIN_WITHDRAW_USD)
         keyboard = telebot.types.ForceReply(selective=False)
     else:
         if is_eng:
@@ -1012,7 +1012,7 @@ def handle_withdraw_pay_sys_entered(message):
         amount = round(float(message.text.strip()), 2)
     except ValueError:
         amount = -1
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     balance = users_db.select_stats_field(chat.id, 'balance')
 
@@ -1023,7 +1023,7 @@ def handle_withdraw_pay_sys_entered(message):
         text = message.reply_to_message.text[:message.reply_to_message.text.find('.') + 2]
         text += "You don't have enough money to withdraw" if is_eng else "Нехватает средств для вывода"
         keyboard = telebot.types.ForceReply(selective=False)
-    elif amount >= config.MIN_WITHDRAW_USD:
+    elif amount >= project_variables.MIN_WITHDRAW_USD:
         pay_sys = message.reply_to_message.text[2: message.reply_to_message.text.find(' ', 2)]
         requisite = users_db.select_requisite(chat.id, pay_sys.lower())
 
@@ -1048,7 +1048,7 @@ def handle_withdraw_pay_sys_entered(message):
             text += "Invalid amount provided" if is_eng else "Введена неправильная сумма"
         else:
             text += "Amount should be greater than *{} USD*" if is_eng else "Сумма должна быть больше *{} USD*"
-            text = text.format(config.MIN_WITHDRAW_USD)
+            text = text.format(project_variables.MIN_WITHDRAW_USD)
         keyboard = telebot.types.ForceReply(selective=False)
 
     try:
@@ -1068,7 +1068,7 @@ def handle_withdraw_btc_entered(message):
     except ValueError:
         amount = -1
 
-    users_db = Users_db(config.DB_NAME)
+    users_db = Users_db(project_variables.DB_NAME)
     is_eng = users_db.select_stats_field(chat.id, 'is_eng')
     requisite = users_db.select_requisite(chat.id, 'bitcoin')
     balance_btc = users_db.select_stats_field(chat.id, 'balance_btc')
@@ -1084,7 +1084,7 @@ def handle_withdraw_btc_entered(message):
         if amount > balance_btc:
             text = "🅱 You don't have enough money to withdraw" if is_eng else "🅱 Нехватает средств для вывода"
             keyboard = telebot.types.ForceReply(selective=False)
-        elif amount >= config.MIN_WITHDRAW_BTC:
+        elif amount >= project_variables.MIN_WITHDRAW_BTC:
             text = coinbase_functions.send_money(requisite, amount, is_eng)
             if (len(text) == 23 or len(text) == 23) and text[-1] == '!':
                 users_db.update_stats_dec_balance(chat.id, amount, is_btc=1)
@@ -1094,7 +1094,7 @@ def handle_withdraw_btc_entered(message):
             else:
                 text = "🅱 Amount should be greater than *{:.8f} BTC*" if is_eng else "🅱 Сумма должна быть больше *{" \
                                                                                       ":.8f} BTC* "
-                text = text.format(utils.to_bitcoin(config.MIN_WITHDRAW_BTC))
+                text = text.format(utils.to_bitcoin(project_variables.MIN_WITHDRAW_BTC))
             keyboard = telebot.types.ForceReply(selective=False)
 
     try:
@@ -1107,7 +1107,7 @@ def handle_withdraw_btc_entered(message):
 
 if __name__ == '__main__':
     if not DEBUG:
-        application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT)
+        application.run(host=project_variables.WEBHOOK_LISTEN, port=project_variables.WEBHOOK_PORT)
     else:
-        application.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT,
+        application.run(host=project_variables.WEBHOOK_LISTEN, port=project_variables.WEBHOOK_PORT,
                         ssl_context=('./SSL_certs/webhook_cert.pem', './SSL_certs/webhook_pkey.pem'), debug=True)

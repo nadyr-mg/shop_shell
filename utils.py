@@ -1,6 +1,6 @@
 from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
-import config
+import project_variables
 
 import binascii
 from hashlib import sha256
@@ -182,7 +182,7 @@ def calc_income(users_db, user_id, is_btc=0):
 # <editor-fold desc="Common functions">
 def calc_percent(value):
     percent = 0
-    if config.MIN_REFILL_USD <= value <= 50:
+    if project_variables.MIN_REFILL_USD <= value <= 50:
         percent = 0.0111
     elif 51 <= value <= 100:
         percent = 0.0222
@@ -243,18 +243,18 @@ def adjust_float(a):
 
 def get_desc_sign(order_id, amount):
     amount = adjust_float(amount)
-    desc = binascii.b2a_base64(config.PAYEER_PAY_DESC.encode('utf8'))[:-1].decode()
-    string_to_hash = ":".join(map(str, [config.PAYEER_MERCHANT_ID, order_id, amount, config.PAYEER_CURRENCY, desc,
-                                       config.PAYEER_SECRET_KEY]))
+    desc = binascii.b2a_base64(project_variables.PAYEER_PAY_DESC.encode('utf8'))[:-1].decode()
+    string_to_hash = ":".join(map(str, [project_variables.PAYEER_MERCHANT_ID, order_id, amount, project_variables.PAYEER_CURRENCY, desc,
+                                        project_variables.PAYEER_SECRET_KEY]))
     return desc, sha256(string_to_hash.encode()).hexdigest().upper()
 
 
 def check_payment(ip_address, post_data):
-    if ip_address in config.PAYEER_TRUSTED_IPS and all(key in post_data for key in post_data_fields):
+    if ip_address in project_variables.PAYEER_TRUSTED_IPS and all(key in post_data for key in post_data_fields):
         parameters = [post_data[post_data_fields[cur_key]][0] for cur_key in range(len(post_data_fields) - 1)]
         if 'm_params' in post_data:
             parameters.append(post_data['m_params'][0])
-        parameters.append(config.PAYEER_SECRET_KEY)
+        parameters.append(project_variables.PAYEER_SECRET_KEY)
 
         result_hash = sha256(":".join(parameters).encode()).hexdigest().upper()
         if post_data['m_sign'][0] == result_hash:
@@ -264,7 +264,3 @@ def check_payment(ip_address, post_data):
                 return 0
     return -1
 # </editor-fold>
-
-
-if __name__ == '__main__':
-    pass

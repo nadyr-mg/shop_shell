@@ -1,4 +1,4 @@
-import config
+import project_variables
 from utils import get_desc_sign
 
 import json
@@ -13,9 +13,9 @@ payment_systems = {
 }
 
 base_values = {
-    'account': config.PAYEER_ACCOUNT,
-    'apiId': config.PAYEER_API_ID,
-    'apiPass': config.PAYEER_API_KEY,
+    'account': project_variables.PAYEER_ACCOUNT,
+    'apiId': project_variables.PAYEER_API_ID,
+    'apiPass': project_variables.PAYEER_API_KEY,
 }
 
 values_for_balance = dict(base_values)
@@ -49,7 +49,7 @@ def get_balance():
     request = Request(api_url.format('balance'), data=urlencode(values_for_balance).encode(), headers=headers)
 
     response = json.loads(urlopen(request).read().decode())
-    return round(float(response['balance']['USD']['BUDGET']) * config.BALANCE_USED_PART, 2)
+    return round(float(response['balance']['USD']['BUDGET']) * project_variables.BALANCE_USED_PART, 2)
 
 
 # <editor-fold desc="Payout possibility">
@@ -139,24 +139,24 @@ def create_merchant(order_id, order_email, amount):
     local_values['action'] = 'merchant'
     desc, sign = get_desc_sign(order_id, amount)
     local_values['shop'] = {
-        'm_shop': config.PAYEER_MERCHANT_ID,
+        'm_shop': project_variables.PAYEER_MERCHANT_ID,
         'm_orderid': order_id,
         'm_amount': amount,
-        'm_curr': config.PAYEER_CURRENCY,
+        'm_curr': project_variables.PAYEER_CURRENCY,
         'm_desc': desc,
         'm_sign': sign
     }
     local_values['shop'] = json.dumps(local_values['shop'])
     local_values['ps'] = {
         'id': '20916096',
-        'curr': config.PAYEER_CURRENCY
+        'curr': project_variables.PAYEER_CURRENCY
     }
     local_values['ps'] = json.dumps(local_values['ps'])
     local_values['form'] = {
         'order_email': order_email
     }
     local_values['form'] = json.dumps(local_values['form'])
-    local_values['status_url'] = config.PAYEER_STATUS_URL
+    local_values['status_url'] = project_variables.PAYEER_STATUS_URL
 
     local_values = urlencode(local_values).encode()
     l = parse_qs(local_values)
@@ -165,18 +165,3 @@ def create_merchant(order_id, order_email, amount):
     response = json.loads(urlopen(request).read().decode())
 
     return response
-
-
-if __name__ == '__main__':
-    print(create_merchant('fsd4bdrg', 'lester0578@gmail.com', 100.00))
-    # import binascii
-    # from hashlib import sha256
-    #
-    # amount = "1.00"
-    # order_id = "12345"
-    # desc = "Test"
-    # desc = binascii.b2a_base64(desc.encode('utf8'))[:-1].decode()
-    # string_to_hash = ":".join(map(str, ["12345", order_id, amount, config.PAYEER_CURRENCY, desc,
-    #                                     'Секретный ключ']))
-    # hash = sha256(string_to_hash.encode()).hexdigest().upper()
-    print()

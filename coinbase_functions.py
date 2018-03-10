@@ -3,7 +3,7 @@ from coinbase.wallet.error import APIError
 from requests import request
 from json import loads
 
-from config import COINBASE_API_KEY, COINBASE_API_SECRET, BALANCE_USED_PART, BTC_AVER_TRANSCTION_SIZE, BTC_FEE_MULT
+from project_variables import COINBASE_API_KEY, COINBASE_API_SECRET, BALANCE_USED_PART, BTC_AVER_TRANSCTION_SIZE, BTC_FEE_MULT
 from utils import to_satoshi, to_bitcoin
 
 client = Client(COINBASE_API_KEY, COINBASE_API_SECRET, api_version="2017-10-26")
@@ -61,8 +61,4 @@ def send_money(address, amount, is_eng):
                 response = "Withdraw completed successfully!" if is_eng else "Вывод завершен успешно!"
     return response
 
-
-if __name__ == "__main__":
-    primary_account.send_money(to="17g2zDvvMtZKSSfjqN1Jiudmq9dTANwQvu", amount="0.0001", currency="BTC",
-                               fee="0.0000226")
 

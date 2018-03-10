@@ -246,7 +246,3 @@ class Users_db:
 
     def close(self):
         self.connection.close()
-
-
-if __name__ == "__main__":
-    pass
