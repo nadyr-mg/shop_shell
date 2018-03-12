@@ -1,4 +1,4 @@
-Template for quick deployment of your own online shop.
+Template for quick deployment of the online shop.
 It includes:
 - Web site template (with SSL certificate)
 - Telegram bot (to make shopping more convenient and mobile for users)
