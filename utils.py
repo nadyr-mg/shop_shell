@@ -25,8 +25,8 @@ keyboard_names = {
 }
 options_variants = [
     [("🇷🇺 Русский", "🇺🇸 English")],
-    [("📈 Statistics", "👥 Referral program", "📲 About the service", "⚙ Settings"),
-     ("📈 Статистика", "👥 Реферальная программа", "📲 О сервисе", "⚙ Настройки")],
+    [("📈 Statistics", "👥 Referral program", "📲 About the service", "⚙ Settings", "👑 Products"),
+     ("📈 Статистика", "👥 Реферальная программа", "📲 О сервисе", "⚙ Настройки", "👑 Товары")],
     [("💵 Refill", "💸 Withdraw", "🔄 Reinvest"), ("💵 Пополнить", "💸 Вывести", "🔄 Реинвест")],
     [("🔗 Invitation link",), ("🔗 Пригласительная ссылка",)],
     [("💬 Language", "💳 Payment requisites", "👤 Set an inviter", "💳 Requisites examples"),
@@ -36,6 +36,8 @@ options_variants = [
     [("💸 USD", "💸 BTC")],
     [("💸 AdvCash", "💸 Payeer", "💸 Qiwi", "💸 Yandex Money")]
 ]
+
+
 # </editor-fold>
 
 
@@ -89,6 +91,8 @@ def requisites_keyboard(name, requisites):
         keyboard.add(InlineKeyboardButton(text=options[cur_measure] + ": {}".format(requisites[cur_measure]),
                                           callback_data=options[cur_measure]))
     return keyboard
+
+
 # </editor-fold>
 
 
@@ -108,6 +112,8 @@ def check_requisite(pay_method, requisite):
     elif pay_method == "Yandex Money" and (len(requisite) != 15 or not (requisite.isnumeric())):
         flag = False
     return flag
+
+
 # </editor-fold>
 
 
@@ -146,6 +152,8 @@ def update_earn_on_line_btc(users_db, user_id, cur_line, **kwargs):
     line_value_btc = int(kwargs.get('line_value_btc') * (0.08 / (2 ** (cur_line - 1))))
     users_db.update_ref_line_btc(user_id, cur_line, line_value_btc)
     return line_value_btc
+
+
 # </editor-fold>
 
 
@@ -176,6 +184,8 @@ def calc_income(users_db, user_id, is_btc=0):
         invested_money = users_db.select_stats_field(user_id, 'invested')
         percent = calc_percent(invested_money)
         users_db.update_stats_invested(user_id, invested_money, invested_money * percent)
+
+
 # </editor-fold>
 
 
@@ -213,6 +223,8 @@ def to_bitcoin(value):
 
 def to_satoshi(value):
     return int(value * 100000000)
+
+
 # </editor-fold>
 
 
@@ -227,6 +239,8 @@ def stop_schedule_thread():
     if schedule_thread is not None:
         schedule_thread.set()
         schedule_thread = None
+
+
 # </editor-fold>
 
 
@@ -244,8 +258,9 @@ def adjust_float(a):
 def get_desc_sign(order_id, amount):
     amount = adjust_float(amount)
     desc = binascii.b2a_base64(project_variables.PAYEER_PAY_DESC.encode('utf8'))[:-1].decode()
-    string_to_hash = ":".join(map(str, [project_variables.PAYEER_MERCHANT_ID, order_id, amount, project_variables.PAYEER_CURRENCY, desc,
-                                        project_variables.PAYEER_SECRET_KEY]))
+    string_to_hash = ":".join(
+        map(str, [project_variables.PAYEER_MERCHANT_ID, order_id, amount, project_variables.PAYEER_CURRENCY, desc,
+                  project_variables.PAYEER_SECRET_KEY]))
     return desc, sha256(string_to_hash.encode()).hexdigest().upper()
 
 
@@ -263,4 +278,5 @@ def check_payment(ip_address, post_data):
             else:
                 return 0
     return -1
+
 # </editor-fold>

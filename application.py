@@ -26,7 +26,8 @@ sleep(1)
 if not DEBUG:
     bot.set_webhook(url="https://{}/{}".format(project_variables.WEBHOOK_DOMAIN, project_variables.TOKEN))
 else:
-    bot.set_webhook(url="https://{}:{}/{}".format(project_variables.SERVER_IP, project_variables.WEBHOOK_PORT, project_variables.TOKEN),
+    bot.set_webhook(url="https://{}:{}/{}".format(project_variables.SERVER_IP, project_variables.WEBHOOK_PORT,
+                                                  project_variables.TOKEN),
                     certificate=open('./SSL_certs/webhook_cert.pem', 'rb'))
 
 
@@ -41,6 +42,8 @@ def handle_request():
 @application.route('/')
 def handle_index():
     return render_template('index_page.html')
+
+
 # </editor-fold>
 
 
@@ -104,6 +107,8 @@ def handle_payment(order_id):
 @application.route('/payeer_428636358.txt')
 def handle_payeer_confirm():
     return project_variables.PAYEER_CONFIRM
+
+
 # </editor-fold>
 
 
@@ -140,6 +145,8 @@ def handle_status_btc():
     except telebot.apihelper.ApiException:
         pass
     return "", 200
+
+
 # </editor-fold>
 # </editor-fold>
 
@@ -181,6 +188,8 @@ def nullify_spam_cnt():
     users_db = Users_db(project_variables.DB_NAME)
     users_db.nullify_spam()
     users_db.close()
+
+
 # </editor-fold>
 
 
@@ -453,6 +462,8 @@ def get_table(message):
             bot.send_message(message.chat.id, text)
         except telebot.apihelper.ApiException:
             pass
+
+
 # </editor-fold>
 
 
@@ -571,6 +582,24 @@ def handle_settings(message):
         bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("settings_keyboard", is_eng))
     except telebot.apihelper.ApiException:
         pass
+
+
+@bot.message_handler(func=lambda message: message.text == "👑 Products" or message.text == "👑 Товары")
+def handle_settings(message):
+    chat = message.chat
+    users_db = Users_db(project_variables.DB_NAME)
+    is_eng = users_db.select_stats_field(chat.id, 'is_eng')
+    users_db.close()
+    if is_eng:
+        text = "Product list:"
+    else:
+        text = "Список товаров:"
+    try:
+        bot.send_message(chat.id, text)
+    except telebot.apihelper.ApiException:
+        pass
+
+
 # </editor-fold>
 
 
@@ -668,6 +697,8 @@ def handle_change_reinvest(call):
         bot.send_message(chat.id, text, reply_markup=utils.get_keyboard("main_keyboard", is_eng), parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 
 
@@ -730,6 +761,8 @@ def handle_reply_inviter(message):
         bot.send_message(chat.id, text)
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 
 
@@ -780,6 +813,8 @@ def handle_reply_requisite(message):
                          parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 
 
@@ -815,7 +850,8 @@ def handle_refill_usd(call):
 
     force_reply = telebot.types.ForceReply(selective=False)
     try:
-        bot.send_message(chat.id, text.format(project_variables.MIN_REFILL_USD), reply_markup=force_reply, parse_mode="Markdown")
+        bot.send_message(chat.id, text.format(project_variables.MIN_REFILL_USD), reply_markup=force_reply,
+                         parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
 
@@ -866,6 +902,8 @@ def handle_refill_usd_entered(message):
         bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 
 
@@ -891,9 +929,12 @@ def handle_refill_btc(call):
                " переводы BTC осуществляются не моментально."
 
     try:
-        bot.send_message(chat.id, text.format(utils.to_bitcoin(project_variables.MIN_REFILL_BTC), address), parse_mode="Markdown")
+        bot.send_message(chat.id, text.format(utils.to_bitcoin(project_variables.MIN_REFILL_BTC), address),
+                         parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 # </editor-fold>
 
@@ -1055,6 +1096,8 @@ def handle_withdraw_pay_sys_entered(message):
         bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 
 
@@ -1101,6 +1144,8 @@ def handle_withdraw_btc_entered(message):
         bot.send_message(chat.id, text, reply_markup=keyboard, parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
+
+
 # </editor-fold>
 # </editor-fold>
 
