@@ -152,38 +152,6 @@ def handle_status_btc():
 
 
 # <editor-fold desc="Schedule events">
-def overcharge_and_clean_repl():
-    users_db = Users_db(project_variables.DB_NAME)
-
-    repls = users_db.select_repl_orders()
-    for repl in repls:
-        order, date = repl
-        if int(time()) - date > ONE_DAY:
-            users_db.delete_repl_by_order(order)
-
-    users = users_db.select_stats_users()
-
-    text_variants = ("Вам начислена сумма дохода:\n", "You are credited with the amount of income:\n")
-    for user in users:
-        user_id = user[0]
-        income, income_btc = user[1], user[2]
-        if income > 0.0 or income_btc > 0:
-            is_eng = user[3]
-            users_db.update_stats_add_income(user_id)
-
-            text = text_variants[is_eng]
-            if income > 0.0:
-                text += "*{} USD* ".format(income)
-            if income_btc > 0:
-                text += "*{:.8f} BTC*".format(utils.to_bitcoin(income_btc))
-
-            try:
-                bot.send_message(user_id, text, parse_mode="Markdown")
-            except telebot.apihelper.ApiException:
-                pass
-    users_db.close()
-
-
 def nullify_spam_cnt():
     users_db = Users_db(project_variables.DB_NAME)
     users_db.nullify_spam()
@@ -265,7 +233,6 @@ def schedule_command(message):
 
     if command == 'start':
         if utils.schedule_thread is None:
-            schedule.every().day.at("01:00").do(overcharge_and_clean_repl)
             schedule.every(NULLIFY_AFTER).minutes.do(nullify_spam_cnt)
             utils.init_schedule(schedule.run_continuously())
 
@@ -505,15 +472,13 @@ def handle_statistics(message):
     is_eng = user_stats[7]
     if is_eng:
         text = "Your balance: *{:.2f} USD*\nYour balance: *{:.8f} BTC*\n\nSum of your investments: *{:.2f} USD*\nSum " \
-               "of your investments: *{:.8f} BTC*\n\nIncome from the project: *{:.2f} USD*\nIncome from the project: " \
-               "*{:.8f} BTC* "
+               "of your investments: *{:.8f} BTC*"
     else:
         text = "Ваш баланс: *{:.2f} USD*\nВаш баланс: *{:.8f} BTC*\n\nСумма ваших инвестиций: *{:.2f} USD*\nСумма " \
-               "ваших инвестиций: *{:.8f} BTC*\n\nДоход от проекта: *{:.2f} USD*\nДоход от проекта: *{:.8f} BTC* "
+               "ваших инвестиций: *{:.8f} BTC*"
     try:
         bot.send_message(chat.id, text.format(user_stats[1], utils.to_bitcoin(user_stats[2]), user_stats[3],
-                                              utils.to_bitcoin(user_stats[4]), user_stats[5],
-                                              utils.to_bitcoin(user_stats[6])),
+                                              utils.to_bitcoin(user_stats[4])),
                          reply_markup=utils.get_keyboard("balance_keyboard", user_stats[7]), parse_mode="Markdown")
     except telebot.apihelper.ApiException:
         pass
